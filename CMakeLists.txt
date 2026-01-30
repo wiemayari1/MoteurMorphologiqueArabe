@@ -9,4 +9,13 @@ add_executable(morpho_engine
     src/morpho.cpp
 )
 
+add_executable(tests
+    src/tests.cpp
+    src/morpho.cpp
+)
+
 target_include_directories(morpho_engine PRIVATE src)
+target_include_directories(tests PRIVATE src)
+
+enable_testing()
+add_test(NAME unit_tests COMMAND tests)
