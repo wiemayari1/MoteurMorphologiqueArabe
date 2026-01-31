@@ -5,7 +5,7 @@
 #include <vector>
 #include <sstream>
 #include "morpho.h"
-#include "avl.h"
+#include "AVL.h"
 #include "hash_table.h"
 
 using namespace std;
