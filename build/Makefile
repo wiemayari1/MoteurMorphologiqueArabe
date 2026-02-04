@@ -129,6 +129,73 @@ morpho_engine/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/build
 .PHONY : morpho_engine/fast
 
+#=============================================================================
+# Target rules for targets named tests
+
+# Build rule for target.
+tests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests
+.PHONY : tests
+
+# fast build rule for target.
+tests/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/build
+.PHONY : tests/fast
+
+src/AVL.o: src/AVL.cpp.o
+.PHONY : src/AVL.o
+
+# target to build an object file
+src/AVL.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/AVL.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/AVL.cpp.o
+.PHONY : src/AVL.cpp.o
+
+src/AVL.i: src/AVL.cpp.i
+.PHONY : src/AVL.i
+
+# target to preprocess a source file
+src/AVL.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/AVL.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/AVL.cpp.i
+.PHONY : src/AVL.cpp.i
+
+src/AVL.s: src/AVL.cpp.s
+.PHONY : src/AVL.s
+
+# target to generate assembly for a file
+src/AVL.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/AVL.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/AVL.cpp.s
+.PHONY : src/AVL.cpp.s
+
+src/hash_table.o: src/hash_table.cpp.o
+.PHONY : src/hash_table.o
+
+# target to build an object file
+src/hash_table.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/hash_table.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/hash_table.cpp.o
+.PHONY : src/hash_table.cpp.o
+
+src/hash_table.i: src/hash_table.cpp.i
+.PHONY : src/hash_table.i
+
+# target to preprocess a source file
+src/hash_table.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/hash_table.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/hash_table.cpp.i
+.PHONY : src/hash_table.cpp.i
+
+src/hash_table.s: src/hash_table.cpp.s
+.PHONY : src/hash_table.s
+
+# target to generate assembly for a file
+src/hash_table.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/hash_table.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/hash_table.cpp.s
+.PHONY : src/hash_table.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -159,6 +226,7 @@ src/morpho.o: src/morpho.cpp.o
 # target to build an object file
 src/morpho.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/morpho.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/morpho.cpp.o
 .PHONY : src/morpho.cpp.o
 
 src/morpho.i: src/morpho.cpp.i
@@ -167,6 +235,7 @@ src/morpho.i: src/morpho.cpp.i
 # target to preprocess a source file
 src/morpho.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/morpho.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/morpho.cpp.i
 .PHONY : src/morpho.cpp.i
 
 src/morpho.s: src/morpho.cpp.s
@@ -175,7 +244,32 @@ src/morpho.s: src/morpho.cpp.s
 # target to generate assembly for a file
 src/morpho.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/morpho_engine.dir/build.make CMakeFiles/morpho_engine.dir/src/morpho.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/morpho.cpp.s
 .PHONY : src/morpho.cpp.s
+
+src/tests.o: src/tests.cpp.o
+.PHONY : src/tests.o
+
+# target to build an object file
+src/tests.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/tests.cpp.o
+.PHONY : src/tests.cpp.o
+
+src/tests.i: src/tests.cpp.i
+.PHONY : src/tests.i
+
+# target to preprocess a source file
+src/tests.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/tests.cpp.i
+.PHONY : src/tests.cpp.i
+
+src/tests.s: src/tests.cpp.s
+.PHONY : src/tests.s
+
+# target to generate assembly for a file
+src/tests.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/src/tests.cpp.s
+.PHONY : src/tests.cpp.s
 
 # Help Target
 help:
@@ -186,12 +280,22 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... morpho_engine"
+	@echo "... tests"
+	@echo "... src/AVL.o"
+	@echo "... src/AVL.i"
+	@echo "... src/AVL.s"
+	@echo "... src/hash_table.o"
+	@echo "... src/hash_table.i"
+	@echo "... src/hash_table.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
 	@echo "... src/morpho.o"
 	@echo "... src/morpho.i"
 	@echo "... src/morpho.s"
+	@echo "... src/tests.o"
+	@echo "... src/tests.i"
+	@echo "... src/tests.s"
 .PHONY : help
 
 

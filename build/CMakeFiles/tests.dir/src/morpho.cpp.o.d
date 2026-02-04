@@ -1,4 +1,4 @@
-CMakeFiles/morpho_engine.dir/src/morpho.cpp.o: \
+CMakeFiles/tests.dir/src/morpho.cpp.o: \
  /home/wiem/MoteurMorphologiqueArabe/src/morpho.cpp \
  /usr/include/stdc-predef.h \
  /home/wiem/MoteurMorphologiqueArabe/include/morpho.h \
