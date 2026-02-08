@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/tests.dir/src/tests.cpp.o CMakeFiles/tests.dir/src/morpho.cpp.o CMakeFiles/tests.dir/src/AVL.cpp.o CMakeFiles/tests.dir/src/hash_table.cpp.o -o tests 

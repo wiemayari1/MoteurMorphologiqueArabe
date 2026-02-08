@@ -1,4 +1,0 @@
-/home/wiem/MoteurMorphologiqueArabe/build/CMakeFiles/morpho_engine.dir
-/home/wiem/MoteurMorphologiqueArabe/build/CMakeFiles/tests.dir
-/home/wiem/MoteurMorphologiqueArabe/build/CMakeFiles/edit_cache.dir
-/home/wiem/MoteurMorphologiqueArabe/build/CMakeFiles/rebuild_cache.dir
