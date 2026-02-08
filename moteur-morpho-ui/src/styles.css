@@ -1,0 +1,20 @@
+/* Fond global avec ambiance manuscrite arabe + direction RTL */
+body {
+  margin: 0;
+  font-family: "Amiri", system-ui, serif;
+  background:
+    radial-gradient(circle at top, #fdf6e3, #fbe9e7),
+    url("https://upload.wikimedia.org/wikipedia/commons/9/9b/Arabic_Calligraphy.png");
+  background-size: cover;
+  background-blend-mode: soft-light;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  direction: rtl;
+}
+
+/* L'application centrée */
+app-root {
+  width: 100%;
+}
