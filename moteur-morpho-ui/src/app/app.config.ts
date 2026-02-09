@@ -10,6 +10,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(),
     provideAnimations(),
-    { provide: Directionality, useValue: { value: 'rtl', change: null } }
-  ]
+    { provide: Directionality, useValue: { value: 'rtl', change: null } },
+  ],
 };
