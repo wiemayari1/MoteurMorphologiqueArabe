@@ -1,20 +1,59 @@
-.app-container { height: 100vh; }
-.app-sidenav { width: 290px; }
-.app-main { padding: 18px; }
-.spacer { flex: 1 1 auto; }
-
-.brand{
-  display:flex; gap:12px; align-items:center;
-  padding:16px 16px 8px;
-}
-.brand .title{ font-weight:700; }
-.brand .subtitle{ opacity:.75; font-size:12px; }
-
-.toolbar-title{ font-weight:600; }
-.toolbar-badge{
-  font-size:12px; opacity:.9; padding:4px 10px;
-  border:1px solid rgba(255,255,255,.55);
-  border-radius:999px;
+:host {
+  display: block;
+  height: 100%;
 }
 
-.active{ background: rgba(0,0,0,.06); border-radius:10px; }
+.app-root {
+  height: 100%;
+}
+
+.app-container {
+  height: 100%;
+  background: var(--mm-bg);
+}
+
+.app-sidenav {
+  width: 290px;
+  background: #ffffffcc;
+  backdrop-filter: blur(6px);
+  border-left: 1px solid rgba(2, 81, 89, 0.15);
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  color: var(--mm-primary);
+
+  .title {
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .subtitle {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+}
+
+.app-toolbar {
+  background: var(--mm-primary);
+  color: white;
+}
+
+.toolbar-title {
+  font-weight: 700;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.toolbar-badge {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.app-main {
+  padding: 16px;
+}
