@@ -1,20 +1,31 @@
-/* Fond global avec ambiance manuscrite arabe + direction RTL */
-body {
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Base obligatoire pour mat-sidenav-container */
+html, body {
+  height: 100%;
   margin: 0;
+}
+
+:root{
+  --mm-primary: #025159;
+  --mm-secondary: #3E848C;
+  --mm-accent: #7AB8BF;
+  --mm-bg: #C4EEF2;
+  --mm-warn: #A67458;
+}
+
+body {
   font-family: "Amiri", system-ui, serif;
+  direction: rtl;
+
   background:
     radial-gradient(circle at top, #fdf6e3, #fbe9e7),
     url("https://upload.wikimedia.org/wikipedia/commons/9/9b/Arabic_Calligraphy.png");
   background-size: cover;
   background-blend-mode: soft-light;
-  min-height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  direction: rtl;
 }
 
-/* L'application centrée */
 app-root {
-  width: 100%;
+  display: block;
+  height: 100%;
 }
