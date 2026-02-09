@@ -1,0 +1,12 @@
+.form{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+  align-items:center;
+}
+button{ grid-column: 1 / -1; justify-self: start; }
+.result{ grid-column: 1 / -1; font-size:18px; margin-top:8px; }
+.error{ grid-column: 1 / -1; color:#b00020; margin-top:8px; }
+@media (max-width: 900px){
+  .form{ grid-template-columns: 1fr; }
+}

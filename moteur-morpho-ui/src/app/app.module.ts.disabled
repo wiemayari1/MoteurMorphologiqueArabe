@@ -1,0 +1,55 @@
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+
+import { AppRoutingModule } from './app-routing.module';
+
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+
+import { AppComponent } from './app.component';
+import { HomeComponent } from './pages/home/home.component';
+import { GenerateComponent } from './pages/generate/generate.component';
+import { ValidateComponent } from './pages/validate/validate.component';
+import { GameComponent } from './pages/game/game.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    HomeComponent,
+    GenerateComponent,
+    ValidateComponent,
+    GameComponent
+  ],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    FormsModule,
+    HttpClientModule,
+
+    AppRoutingModule,
+
+    MatToolbarModule,
+    MatSidenavModule,
+    MatListModule,
+    MatIconModule,
+    MatCardModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatProgressBarModule
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }

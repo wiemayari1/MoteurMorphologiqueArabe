@@ -1,0 +1,29 @@
+<mat-card>
+  <mat-card-title>توليد كلمة مشتقة</mat-card-title>
+  <mat-card-content class="form">
+    <mat-form-field appearance="outline">
+      <mat-label>الجذر (ثلاثي)</mat-label>
+      <input matInput [(ngModel)]="root" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>الوزن / الشِّمَة</mat-label>
+      <input matInput [(ngModel)]="scheme" />
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading">
+      <mat-icon>auto_fix_high</mat-icon>
+      توليد
+    </button>
+
+    <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+    <div class="result" *ngIf="resultWord">
+      النتيجة: <b>{{ resultWord }}</b>
+    </div>
+
+    <div class="error" *ngIf="error">
+      {{ error }}
+    </div>
+  </mat-card-content>
+</mat-card>
