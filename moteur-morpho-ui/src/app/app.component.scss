@@ -1,0 +1,49 @@
+.layout { height: 100vh; }
+
+.sidenav{
+  width: 300px;
+  background: #ffffff;
+  border-left: 1px solid rgba(2,81,89,0.12);
+}
+
+.brand{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(2,81,89,0.10);
+}
+.logo{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--mm-primary);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.title .name{ font-weight: 800; color: var(--mm-primary); }
+.title .sub{ font-size: 12px; color: rgba(6,36,39,0.65); }
+
+.topbar{
+  background: linear-gradient(90deg, var(--mm-primary), var(--mm-secondary));
+  color: white;
+}
+.spacer{ flex: 1; }
+.chip{
+  background: rgba(255,255,255,0.18);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.content{
+  padding: 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.active{
+  background: rgba(122,184,191,0.22);
+  border-radius: 12px;
+}
