@@ -1,0 +1,55 @@
+<mat-sidenav-container class="layout">
+  <mat-sidenav class="sidenav" mode="side" opened>
+    <div class="brand">
+      <div class="logo">م</div>
+      <div class="title">
+        <div class="name">المحرّك الصرفي</div>
+        <div class="sub">Moteur Morphologique Arabe</div>
+      </div>
+    </div>
+
+    <mat-nav-list>
+      <a mat-list-item routerLink="/" routerLinkActive="active">
+        <mat-icon>home</mat-icon>
+        <span>الرئيسية</span>
+      </a>
+
+      <a mat-list-item routerLink="/roots" routerLinkActive="active">
+        <mat-icon>account_tree</mat-icon>
+        <span>الجذور</span>
+      </a>
+
+      <a mat-list-item routerLink="/schemes" routerLinkActive="active">
+        <mat-icon>grid_on</mat-icon>
+        <span>الأوزان</span>
+      </a>
+
+      <a mat-list-item routerLink="/generate" routerLinkActive="active">
+        <mat-icon>auto_fix_high</mat-icon>
+        <span>التوليد</span>
+      </a>
+
+      <a mat-list-item routerLink="/validate" routerLinkActive="active">
+        <mat-icon>verified</mat-icon>
+        <span>التحقّق</span>
+      </a>
+
+      <a mat-list-item routerLink="/game" routerLinkActive="active">
+        <mat-icon>sports_esports</mat-icon>
+        <span>اللعبة</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="topbar">
+      <span>Mini projet Algorithmique — Root/Pattern</span>
+      <span class="spacer"></span>
+      <span class="chip">RTL</span>
+    </mat-toolbar>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
