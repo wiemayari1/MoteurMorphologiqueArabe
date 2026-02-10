@@ -1,0 +1,28 @@
+<mat-card class="box">
+  <h2>الأوزان</h2>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>اسم الوزن</mat-label>
+      <input matInput [(ngModel)]="name" placeholder="مفعول" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>القالب</mat-label>
+      <input matInput [(ngModel)]="templ" placeholder="مفعول" />
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" (click)="save()">حفظ</button>
+    <button mat-stroked-button (click)="refresh()">تحديث</button>
+  </div>
+
+  <div class="err" *ngIf="error">خطأ: {{error}}</div>
+
+  <div class="list">
+    <div class="item" *ngFor="let s of schemes">
+      <div class="n">{{s.name}}</div>
+      <div class="t">{{s.templ}}</div>
+      <button mat-stroked-button (click)="del(s)">حذف</button>
+    </div>
+  </div>
+</mat-card>
