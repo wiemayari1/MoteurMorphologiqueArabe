@@ -1,6 +1,10 @@
+# Node
+node_modules/
+api/node_modules/
 
-/build
+# Angular
+moteur-morpho-ui/node_modules/
+moteur-morpho-ui/dist/
 
-
-# CMake
-/build/
+# Build C++
+build/
