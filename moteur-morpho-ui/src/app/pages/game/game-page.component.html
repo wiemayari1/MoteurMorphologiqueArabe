@@ -1,0 +1,23 @@
+<mat-card class="box" *ngIf="!finished; else end">
+  <h2>اللعبة</h2>
+  <p>اختر الإجابة الصحيحة:</p>
+
+  <div class="q">
+    الجذر: <b>{{questions[i].root}}</b> — الوزن: <b>{{questions[i].scheme}}</b>
+  </div>
+
+  <div class="buttons">
+    <button mat-raised-button color="primary" (click)="pick('A')">اختيار A</button>
+    <button mat-stroked-button (click)="pick('B')">اختيار B</button>
+  </div>
+
+  <div class="meta">السؤال {{i+1}} / {{questions.length}}</div>
+</mat-card>
+
+<ng-template #end>
+  <mat-card class="box">
+    <h2>النهاية</h2>
+    <p>النتيجة: <b>{{score}}</b> / {{questions.length}}</p>
+    <button mat-raised-button color="primary" (click)="reset()">إعادة</button>
+  </mat-card>
+</ng-template>
