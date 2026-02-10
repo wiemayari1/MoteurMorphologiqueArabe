@@ -1,0 +1,21 @@
+:root{
+  --mm-primary: #025159;
+  --mm-secondary: #3E848C;
+  --mm-accent: #7AB8BF;
+  --mm-bg: #C4EEF2;
+  --mm-warn: #A67458;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Amiri", system-ui, serif;
+  direction: rtl;
+  background: linear-gradient(180deg, #ffffff 0%, var(--mm-bg) 100%);
+  color: #062427;
+}
+
+a { color: inherit; text-decoration: none; }
