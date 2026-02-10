@@ -1,12 +1,19 @@
 #include "AVL.h"
+
 #include <algorithm>
+#include <utility>
+
+static int nodeHeight(AVLNode* n) {
+    return n ? n->height : 0;
+}
 
 int AVLTree::height(AVLNode* node) const {
-    return node ? node->height : 0;
+    return nodeHeight(node);
 }
 
 int AVLTree::getBalance(AVLNode* node) const {
-    return node ? height(node->left) - height(node->right) : 0;
+    if (!node) return 0;
+    return nodeHeight(node->left) - nodeHeight(node->right);
 }
 
 AVLNode* AVLTree::rotateRight(AVLNode* y) {
@@ -16,8 +23,8 @@ AVLNode* AVLTree::rotateRight(AVLNode* y) {
     x->right = y;
     y->left = T2;
 
-    y->height = std::max(height(y->left), height(y->right)) + 1;
-    x->height = std::max(height(x->left), height(x->right)) + 1;
+    y->height = 1 + std::max(nodeHeight(y->left), nodeHeight(y->right));
+    x->height = 1 + std::max(nodeHeight(x->left), nodeHeight(x->right));
 
     return x;
 }
@@ -29,8 +36,8 @@ AVLNode* AVLTree::rotateLeft(AVLNode* x) {
     y->left = x;
     x->right = T2;
 
-    x->height = std::max(height(x->left), height(x->right)) + 1;
-    y->height = std::max(height(y->left), height(y->right)) + 1;
+    x->height = 1 + std::max(nodeHeight(x->left), nodeHeight(x->right));
+    y->height = 1 + std::max(nodeHeight(y->left), nodeHeight(y->right));
 
     return y;
 }
@@ -43,20 +50,27 @@ AVLNode* AVLTree::insert(AVLNode* node, const std::u32string& key) {
     } else if (key > node->key) {
         node->right = insert(node->right, key);
     } else {
-        return node; // pas de doublons
+        // déjà présent
+        return node;
     }
 
-    node->height = 1 + std::max(height(node->left), height(node->right));
+    node->height = 1 + std::max(nodeHeight(node->left), nodeHeight(node->right));
     int balance = getBalance(node);
 
-    if (balance > 1 && key < node->left->key)
+    // Left Left
+    if (balance > 1 && key < node->left->key) {
         return rotateRight(node);
-    if (balance < -1 && key > node->right->key)
+    }
+    // Right Right
+    if (balance < -1 && key > node->right->key) {
         return rotateLeft(node);
+    }
+    // Left Right
     if (balance > 1 && key > node->left->key) {
         node->left = rotateLeft(node->left);
         return rotateRight(node);
     }
+    // Right Left
     if (balance < -1 && key < node->right->key) {
         node->right = rotateRight(node->right);
         return rotateLeft(node);
@@ -70,7 +84,8 @@ void AVLTree::insert(const std::u32string& key) {
 }
 
 AVLNode* AVLTree::find(AVLNode* node, const std::u32string& key) const {
-    if (!node || node->key == key) return node;
+    if (!node) return nullptr;
+    if (key == node->key) return node;
     if (key < node->key) return find(node->left, key);
     return find(node->right, key);
 }
@@ -81,31 +96,38 @@ bool AVLTree::contains(const std::u32string& key) const {
 
 void AVLTree::incrementFrequency(const std::u32string& key) {
     AVLNode* n = find(root, key);
-    if (n) n->frequency++;
+    if (!n) return;
+    n->frequency += 1;
 }
 
-void AVLTree::addDerived(const std::u32string& root_key,
-                         const std::u32string& derived) {
+void AVLTree::addDerived(const std::u32string& root_key, const std::u32string& d) {
     AVLNode* n = find(root, root_key);
-    if (n) n->derived.push_back(derived);
+    if (!n) return;
+
+    // éviter doublons
+    for (const auto& x : n->derived) {
+        if (x == d) return;
+    }
+    n->derived.push_back(d);
+}
+
+static void inorder(const AVLNode* n, const std::function<void(const AVLNode*)>& cb) {
+    if (!n) return;
+    inorder(n->left, cb);
+    cb(n);
+    inorder(n->right, cb);
 }
 
 void AVLTree::forEach(std::function<void(const AVLNode*)> callback) const {
-    std::function<void(const AVLNode*)> inorder = [&](const AVLNode* node) {
-        if (!node) return;
-        inorder(node->left);
-        callback(node);
-        inorder(node->right);
-    };
-    inorder(root);
+    inorder(root, callback);
+}
+
+std::vector<std::u32string> AVLTree::getAllKeys() const {
+    std::vector<std::u32string> res;
+    forEach([&](const AVLNode* n) { res.push_back(n->key); });
+    return res;
 }
 
 void AVLTree::getAllKeys(const std::function<void(const AVLNode*)>& callback) const {
     forEach(callback);
-}
-
-std::vector<std::u32string> AVLTree::getAllKeys() const {
-    std::vector<std::u32string> keys;
-    getAllKeys([&](const AVLNode* n){ keys.push_back(n->key); });
-    return keys;
 }
