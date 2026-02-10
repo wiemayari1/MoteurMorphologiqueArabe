@@ -1,0 +1,10 @@
+.box{ border-radius: 18px; border: 1px solid rgba(2,81,89,0.10); }
+h2{ margin-top: 0; color: var(--mm-primary); }
+.q{
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(122,184,191,0.20);
+}
+.buttons{ display: flex; gap: 10px; flex-wrap: wrap; }
+.meta{ margin-top: 10px; color: rgba(6,36,39,0.7); }
