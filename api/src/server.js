@@ -8,9 +8,9 @@ import fs from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// CORS corrigé pour accepter toutes les origines de développement
+// CORS corrigé pour accepter toutes les origines (utile pour les VM / Ports aléatoires)
 app.use(cors({
-    origin: ['http://localhost:4200', 'http://localhost:4201', 'http://localhost:44539'],
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type']
 }));
