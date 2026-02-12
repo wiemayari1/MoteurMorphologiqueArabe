@@ -25,15 +25,22 @@ import { MatButtonModule } from '@angular/material/button';
       <main class="page-content">
         <ng-content></ng-content>
       </main>
+
+      <!-- Illustration Book au bas de la page -->
+      <footer class="page-footer">
+        <div class="footer-art">
+          <img src="assets/illustrations/book.png" alt="Book Illustration" class="book-img">
+        </div>
+      </footer>
     </div>
   `,
   styleUrls: ['./page-shell.component.scss']
 })
 export class PageShellComponent {
   @Input() title: string = '';
-  
-  constructor(private router: Router) {}
-  
+
+  constructor(private router: Router) { }
+
   goHome() {
     this.router.navigate(['/']);
   }

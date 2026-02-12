@@ -1,18 +1,19 @@
 .page-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
-  padding-bottom: 40px;
+  background-color: #C4EEF2; // Palette Background
+  display: flex;
+  flex-direction: column;
 }
 
 .page-header {
-  background: linear-gradient(135deg, #006064 0%, #00838f 100%);
+  background-color: #025159; // Primary Dark
   color: white;
   padding: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(2, 81, 89, 0.2);
   position: sticky;
   top: 0;
   z-index: 100;
-  
+
   .header-content {
     max-width: 1200px;
     margin: 0 auto;
@@ -22,25 +23,25 @@
     justify-content: space-between;
     gap: 16px;
   }
-  
+
   .home-btn {
     color: white;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     transition: all 0.3s ease;
-    
+
     &:hover {
       background: rgba(255, 255, 255, 0.25);
       transform: scale(1.05);
     }
-    
+
     mat-icon {
       font-size: 24px;
       width: 24px;
       height: 24px;
     }
   }
-  
+
   .page-title {
     font-size: 28px;
     font-weight: 600;
@@ -50,7 +51,7 @@
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     letter-spacing: 0.5px;
   }
-  
+
   .header-spacer {
     width: 48px; // Même largeur que le bouton home pour centrer le titre
   }
@@ -60,6 +61,26 @@
   max-width: 1200px;
   margin: 32px auto;
   padding: 0 24px;
+  flex: 1; // Permet de pousser le footer vers le bas
+}
+
+.page-footer {
+  width: 100%;
+  padding: 20px 0;
+  pointer-events: none; // Pour ne pas gêner les clics
+}
+
+.footer-art {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+
+  .book-img {
+    max-width: 250px;
+    height: auto;
+    opacity: 0.9;
+    filter: drop-shadow(0 5px 15px rgba(2, 81, 89, 0.1));
+  }
 }
 
 // Responsive
@@ -68,12 +89,12 @@
     .page-title {
       font-size: 22px;
     }
-    
+
     .header-content {
       padding: 12px 16px;
     }
   }
-  
+
   .page-content {
     margin: 20px auto;
     padding: 0 16px;

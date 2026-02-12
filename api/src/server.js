@@ -83,13 +83,13 @@ function execEngine(args) {
             }
 
             try {
-                // Nettoyage de stdout : parfois des outils tiers ou des warnings polluent la sortie
-                // On cherche le dernier objet JSON valide
-                const jsonStart = stdout.lastIndexOf('{');
+                // Nettoyage de stdout : on cherche le premier '{' et le dernier '}'
+                const jsonStart = stdout.indexOf('{');
                 const jsonEnd = stdout.lastIndexOf('}');
 
                 if (jsonStart === -1 || jsonEnd === -1) {
-                    throw new Error('No JSON found in output');
+                    console.error('Raw Stdout (No JSON):', stdout);
+                    throw new Error('No JSON found in engine output');
                 }
 
                 const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
@@ -98,7 +98,8 @@ function execEngine(args) {
             } catch (e) {
                 console.error('JSON Parse Error:', e);
                 console.error('Raw Stdout:', stdout);
-                reject(new Error('Invalid JSON output from engine'));
+                // Si on a une erreur mais que le moteur a dit quelque chose, on essaie de le renvoyer proprement
+                reject(new Error(`Error parsing engine response: ${e.message}`));
             }
         });
     });

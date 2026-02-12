@@ -59,9 +59,10 @@ export interface ApiResponse {
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:3001/api';
+  // On utilise un chemin relatif pour être compatible avec un proxy ou différents ports
+  private apiUrl = '/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ========== GESTION DES ERREURS ==========
   private handleError(error: HttpErrorResponse) {
@@ -76,7 +77,7 @@ export class ApiService {
   }
 
   // ========== RACINES (الجذور) ==========
-  
+
   // Récupérer toutes les racines
   getRoots(): Observable<RootsResponse> {
     return this.http.get<RootsResponse>(`${this.apiUrl}/roots`)
@@ -90,9 +91,9 @@ export class ApiService {
 
   // Ajouter une racine
   addRoot(root: string, meaning: string = ''): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.apiUrl}/roots`, { 
-      root: root.trim(), 
-      meaning: meaning.trim() 
+    return this.http.post<ApiResponse>(`${this.apiUrl}/roots`, {
+      root: root.trim(),
+      meaning: meaning.trim()
     }).pipe(catchError(this.handleError));
   }
 
@@ -111,7 +112,7 @@ export class ApiService {
   }
 
   // ========== SCHÉMAS (الأوزان) ==========
-  
+
   // Récupérer tous les schémas
   getSchemes(): Observable<SchemesResponse> {
     return this.http.get<SchemesResponse>(`${this.apiUrl}/schemes`)
@@ -125,8 +126,8 @@ export class ApiService {
 
   // Ajouter un nouveau schéma
   addScheme(name: string, template: string): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.apiUrl}/schemes`, { 
-      name: name.trim(), 
+    return this.http.post<ApiResponse>(`${this.apiUrl}/schemes`, {
+      name: name.trim(),
       pattern: template.trim()  // Le backend attend "pattern" pas "template"
     }).pipe(catchError(this.handleError));
   }
@@ -134,7 +135,7 @@ export class ApiService {
   // Mettre à jour un schéma existant
   updateScheme(name: string, template: string): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(
-      `${this.apiUrl}/schemes/${encodeURIComponent(name.trim())}`, 
+      `${this.apiUrl}/schemes/${encodeURIComponent(name.trim())}`,
       { pattern: template.trim() }
     ).pipe(catchError(this.handleError));
   }
@@ -147,7 +148,7 @@ export class ApiService {
   }
 
   // ========== GÉNÉRATION (التوليد) ==========
-  
+
   generate(data: { root: string; scheme: string }): Observable<GenerateResponse> {
     return this.http.post<GenerateResponse>(`${this.apiUrl}/generate`, {
       root: data.root.trim(),
@@ -156,7 +157,7 @@ export class ApiService {
   }
 
   // ========== VALIDATION (التحقق) ==========
-  
+
   validate(data: { word: string; root: string }): Observable<ValidateResponse> {
     return this.http.post<ValidateResponse>(`${this.apiUrl}/validate`, {
       word: data.word.trim(),
@@ -165,7 +166,7 @@ export class ApiService {
   }
 
   // ========== JEU (اللعبة) ==========
-  
+
   getGameQuestion(): Observable<GameQuestion> {
     return this.http.get<GameQuestion>(`${this.apiUrl}/game/question`)
       .pipe(catchError(this.handleError));
@@ -174,7 +175,7 @@ export class ApiService {
   // NOUVEAU: Vérifier la réponse du jeu
   checkGameAnswer(word: string, root: string): Observable<{ ok: boolean; correct: boolean }> {
     return this.http.post<{ ok: boolean; correct: boolean }>(
-      `${this.apiUrl}/game/check`, 
+      `${this.apiUrl}/game/check`,
       { word, root }
     ).pipe(catchError(this.handleError));
   }

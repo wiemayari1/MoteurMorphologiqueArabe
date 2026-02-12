@@ -12,7 +12,8 @@ body {
   font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f7fa; /* Light background for premium feel */
+  background-color: #C4EEF2;
+  /* Palette Background */
 }
 
 /* Réduire les animations lourdes */

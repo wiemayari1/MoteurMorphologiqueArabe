@@ -1,48 +1,36 @@
 @use '@angular/material' as mat;
 
-$mm-primary: mat.m2-define-palette((
-  50: #e0eded,
-  100: #b3d1d4,
-  200: #80b2b8,
-  300: #4d939c,
-  400: #267b87,
-  500: #025159,
-  600: #024a51,
-  700: #024047,
-  800: #02363d,
-  900: #012628,
-  contrast: (
-    500: white,
-  )
-));
+$mm-primary: mat.m2-define-palette((50: #e8f0f1,
+      100: #c5dade,
+      200: #9ec1c8,
+      300: #77a8b1,
+      400: #5a96a0,
+      500: #3e848c, // Palette Primary
+      600: #387c84,
+      700: #307179,
+      800: #29676f,
+      900: #1b545c,
+      contrast: (500: white,
+      )));
 
-$mm-accent: mat.m2-define-palette((
-  50: #eef7f8,
-  100: #d4eaed,
-  200: #b8dbe0,
-  300: #9cccd3,
-  400: #86c1ca,
-  500: #7ab8bf,
-  600: #72b0b7,
-  700: #67a7ae,
-  800: #5d9fa6,
-  900: #4a8f98,
-  contrast: (
-    500: #022b2f
-  )
-));
+$mm-accent: mat.m2-define-palette((50: #f4eeeb,
+      100: #e4d5cc,
+      200: #d2baa9,
+      300: #c09e86,
+      400: #b3896f,
+      500: #A67458, // Palette Secondary (Brown)
+      600: #9e6c50,
+      700: #946147,
+      800: #8a573d,
+      900: #7a452d,
+      contrast: (500: white)));
 
 $mm-warn: mat.m2-define-palette(mat.$m2-brown-palette);
 
-$theme: mat.m2-define-light-theme((
-  color: (
-    primary: $mm-primary,
-    accent: $mm-accent,
-    warn: $mm-warn
-  ),
-  typography: mat.m2-define-typography-config(
-    $font-family: 'Amiri, system-ui, serif'
-  )
-));
+$theme: mat.m2-define-light-theme((color: (primary: $mm-primary,
+        accent: $mm-accent,
+        warn: $mm-warn ),
+      typography: mat.m2-define-typography-config($font-family: 'Amiri, system-ui, serif'
+      )));
 
 @include mat.all-component-themes($theme);
