@@ -11,6 +11,14 @@ Assurez-vous d'avoir installé :
 -   **Node.js** (pour l'API et l'Interface Web)
 -   **Angular CLI** (pour l'Interface Web : `npm install -g @angular/cli`)
 
+### 🐧 Spécial Linux / Ubuntu
+Si vous êtes sous Ubuntu, voici les commandes pour tout installer d'un coup :
+```bash
+sudo apt update
+sudo apt install build-essential cmake nodejs npm
+sudo npm install -g @angular/cli
+```
+
 ### 2. Compilation du Moteur C++ (CLI)
 C'est le cœur du projet. Il doit être compilé pour que tout fonctionne.
 
