@@ -1,50 +1,87 @@
-<app-page-shell title="اللعبة">
+<app-page-shell title="اللعبة" footerImageSrc="assets/illustrations/book.png">
   <div class="game-container">
-    
-    <div class="score-board">
-      <span>النقاط: {{ score }} / {{ totalQuestions }}</span>
-    </div>
 
-    <div *ngIf="loading" class="loading">
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      <p>جاري التحميل...</p>
-    </div>
+    <!-- GAME OVER SCREEN -->
+    <mat-card *ngIf="gameFinished" class="game-card results-card">
+      <div class="final-results">
+        <h2>انتهت اللعبة!</h2>
 
-    <mat-card *ngIf="!loading && question" class="question-card">
-      <mat-card-header>
-        <mat-card-title>ما هو الكلمة المشتقة؟</mat-card-title>
-        <mat-card-subtitle>
-          الجذر: <strong>{{ question.root }}</strong> | 
-          الوزن: <strong>{{ question.scheme }}</strong>
-        </mat-card-subtitle>
-      </mat-card-header>
-
-      <mat-card-content>
-        <div class="options-grid">
-          <button 
-            mat-raised-button
-            *ngFor="let option of question.options; let i = index"
-            [class]="getButtonClass(i)"
-            (click)="selectOption(i)"
-            [disabled]="showResult">
-            {{ option }}
-          </button>
+        <div class="score-circle">
+          <span class="score-number">{{ score }}</span>
+          <span class="score-total">/ {{ totalQuestions }}</span>
         </div>
 
-        <div *ngIf="showResult" class="result" [class.correct]="isCorrect" [class.wrong]="!isCorrect">
-          <h3 *ngIf="isCorrect">✅ أحسنت! الإجابة صحيحة</h3>
-          <h3 *ngIf="!isCorrect">❌ خطأ! الإجابة الصحيحة هي: {{ question.options[question.correct_index] }}</h3>
-          
-          <button mat-raised-button color="primary" (click)="nextQuestion()">
-            السؤال التالي →
-          </button>
-        </div>
-      </mat-card-content>
+        <p class="score-message">{{ getScoreMessage() }}</p>
+
+        <button mat-raised-button color="primary" class="restart-btn" (click)="startNewGame()">
+          <mat-icon>replay</mat-icon>
+          لعب مرة أخرى
+        </button>
+      </div>
     </mat-card>
 
-    <div *ngIf="!loading && !question" class="error">
-      <p>حدث خطأ في تحميل اللعبة</p>
-      <button mat-raised-button (click)="loadQuestion()">إعادة المحاولة</button>
+    <!-- LOADING SCREEN -->
+    <div *ngIf="loading && !gameFinished" class="loading-state">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <p>جاري تحميل السؤال...</p>
+    </div>
+
+    <!-- ACTIVE GAME SCREEN -->
+    <div *ngIf="!loading && !gameFinished && !error">
+
+      <!-- SCORE HEADER -->
+      <div class="game-header">
+        <div class="progress-info">
+          السؤال {{ currentIndex + 1 }} من {{ totalQuestions }}
+        </div>
+        <div class="score-badge">
+          النقاط: {{ score }}
+        </div>
+      </div>
+      <mat-progress-bar mode="determinate" [value]="((currentIndex) / totalQuestions) * 100"
+        class="game-progress"></mat-progress-bar>
+
+      <!-- QUESTION CARD -->
+      <mat-card class="game-card">
+        <mat-card-content>
+          <div class="question-section" *ngIf="question">
+            <h3 class="question-text">
+              ما هو ناتج دمج الجذر <span class="highlight">{{ question.root }}</span>
+              مع الوزن <span class="highlight">{{ question.scheme }}</span>؟
+            </h3>
+
+            <div class="options-grid">
+              <button mat-raised-button *ngFor="let option of question.options; let i = index" class="option-btn"
+                [class.correct-btn]="getButtonClass(i) === 'correct-btn'"
+                [class.wrong-btn]="getButtonClass(i) === 'wrong-btn'" (click)="selectOption(i)" [disabled]="showResult">
+                {{ option }}
+              </button>
+            </div>
+
+            <!-- RESULT FEEDBACK -->
+            <div *ngIf="showResult" class="result-feedback" [class.success]="isCorrect" [class.failure]="!isCorrect">
+              <div class="feedback-text">
+                <mat-icon>{{ isCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
+                <span *ngIf="isCorrect">إجابة صحيحة! أحسنت.</span>
+                <span *ngIf="!isCorrect">إجابة خاطئة. الإجابة الصحيحة هي: <strong>{{
+                    question.options[question.correct_index] }}</strong></span>
+              </div>
+
+              <button mat-raised-button color="primary" (click)="nextQuestion()">
+                السؤال التالي
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- ERROR SCREEN -->
+    <div *ngIf="error" class="error-state">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{ error }}</p>
+      <button mat-stroked-button color="warn" (click)="loadQuestion()">إعادة المحاولة</button>
     </div>
 
   </div>

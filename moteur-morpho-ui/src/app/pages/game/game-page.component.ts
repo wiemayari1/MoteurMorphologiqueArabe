@@ -9,16 +9,6 @@ import { PageShellComponent } from '../../shared/page-shell/page-shell.component
 import { ApiService, GameQuestion } from '../../services/api.service';
 import { Subject, takeUntil } from 'rxjs';
 
-// Interface pour le frontend
-interface QuestionDisplay {
-  id: number;
-  word: string;
-  correctAnswer: string;
-  options: string[];
-  correctIndex: number;
-  type: 'conjugation' | 'derivation';
-}
-
 @Component({
   selector: 'app-game-page',
   standalone: true,
@@ -31,109 +21,33 @@ interface QuestionDisplay {
     MatIconModule,
     PageShellComponent
   ],
-  template: `
-    <app-page-shell title="اللعبة">
-      <div class="game-container">
-        <!-- Stats -->
-        <div class="game-stats" *ngIf="!loading && !error">
-          <div class="score-badge">
-            <span class="score-label">النقاط:</span>
-            <span class="score-value">{{ score }} / {{ totalQuestions }}</span>
-          </div>
-          <mat-progress-bar 
-            mode="determinate" 
-            [value]="(currentQuestionIndex / totalQuestions) * 100"
-            class="game-progress">
-          </mat-progress-bar>
-          <div class="question-counter">
-            السؤال {{ currentQuestionIndex + 1 }} من {{ totalQuestions }}
-          </div>
-        </div>
-
-        <!-- Loading -->
-        <div class="loading-state" *ngIf="loading">
-          <div class="spinner"></div>
-          <p>جاري تحميل اللعبة...</p>
-        </div>
-
-        <!-- Error -->
-        <div class="error-state" *ngIf="error">
-          <mat-icon class="error-icon">error</mat-icon>
-          <p>{{ error }}</p>
-          <button mat-raised-button color="primary" (click)="restartGame()">
-            إعادة المحاولة
-          </button>
-        </div>
-
-        <!-- Game Content -->
-        <mat-card class="game-card" *ngIf="!loading && !error && !gameFinished">
-          <div class="question-section" *ngIf="currentQuestion">
-            <h3 class="question-text">ما هو وزن كلمة "{{ currentQuestion.word }}"؟</h3>
-            
-            <div class="options-grid">
-              <button 
-                *ngFor="let option of currentQuestion.options; let i = index"
-                mat-raised-button
-                class="option-btn"
-                [class.correct]="showResult && i === currentQuestion.correctIndex"
-                [class.wrong]="showResult && selectedIndex === i && i !== currentQuestion.correctIndex"
-                [disabled]="showResult"
-                (click)="selectAnswer(i)">
-                {{ option }}
-              </button>
-            </div>
-
-            <div class="result-section" *ngIf="showResult">
-              <div class="result-message" [class.success]="isCorrect" [class.failure]="!isCorrect">
-                <mat-icon>{{ isCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
-                <span>{{ isCorrect ? 'إجابة صحيحة!' : 'إجابة خاطئة!' }}</span>
-              </div>
-              <button mat-raised-button color="primary" (click)="nextQuestion()">
-                {{ isLastQuestion ? 'إنهاء اللعبة' : 'السؤال التالي' }}
-              </button>
-            </div>
-          </div>
-        </mat-card>
-
-        <!-- Game Finished -->
-        <mat-card class="game-card results-card" *ngIf="gameFinished">
-          <div class="final-results">
-            <h2>انتهت اللعبة!</h2>
-            <div class="final-score">
-              <span class="score-number">{{ score }}</span>
-              <span class="score-total">/{{ totalQuestions }}</span>
-            </div>
-            <p class="score-message">{{ getScoreMessage() }}</p>
-            <button mat-raised-button color="primary" (click)="restartGame()">
-              <mat-icon>replay</mat-icon>
-              لعب مرة أخرى
-            </button>
-          </div>
-        </mat-card>
-      </div>
-    </app-page-shell>
-  `,
+  templateUrl: './game-page.component.html',
   styleUrls: ['./game-page.component.scss']
 })
 export class GamePageComponent implements OnInit, OnDestroy {
   loading = true;
   error: string | null = null;
-  questions: QuestionDisplay[] = [];
-  currentQuestionIndex = 0;
-  currentQuestion: QuestionDisplay | null = null;
-  selectedIndex: number | null = null;
+
+  // Game State
+  score = 0;
+  totalQuestions = 6;
+  currentIndex = 0;
+  gameFinished = false;
+
+  // Current Question Data based on HTML template requirements
+  question: any = null; // { root, scheme, options, correct_index }
+
+  // User Interaction
   showResult = false;
   isCorrect = false;
-  score = 0;
-  totalQuestions = 5;
-  gameFinished = false;
-  
+  selectedIndex: number | null = null;
+
   private destroy$ = new Subject<void>();
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService) { }
 
   ngOnInit() {
-    this.loadGame();
+    this.startNewGame();
   }
 
   ngOnDestroy() {
@@ -141,87 +55,75 @@ export class GamePageComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadGame() {
+  startNewGame() {
+    this.score = 0;
+    this.currentIndex = 0;
+    this.gameFinished = false;
+    this.loadQuestion();
+  }
+
+  loadQuestion() {
     this.loading = true;
     this.error = null;
-    
-    // Données mock
-    const mockQuestions: QuestionDisplay[] = [
-      { id: 1, word: 'كتب', correctAnswer: 'فاعل', options: ['فاعل', 'مفعول', 'فِعال', 'مفعّل'], correctIndex: 0, type: 'conjugation' },
-      { id: 2, word: 'مكتوب', correctAnswer: 'مفعول', options: ['فاعل', 'مفعول', 'فِعال', 'مفعّل'], correctIndex: 1, type: 'conjugation' },
-      { id: 3, word: 'مدرسة', correctAnswer: 'مفعّلة', options: ['فاعلة', 'مفعولة', 'مفعّلة', 'فَعِيل'], correctIndex: 2, type: 'conjugation' },
-      { id: 4, word: 'كتاب', correctAnswer: 'فِعال', options: ['فاعل', 'مفعول', 'فِعال', 'مفعّل'], correctIndex: 2, type: 'conjugation' },
-      { id: 5, word: 'معلم', correctAnswer: 'مفَعّل', options: ['فاعل', 'مفعول', 'فِعال', 'مفَعّل'], correctIndex: 3, type: 'conjugation' }
-    ];
+    this.showResult = false;
+    this.selectedIndex = null;
+    this.question = null;
 
-    // Appel API avec mapping
     this.apiService.getGameQuestion().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (apiResponse: GameQuestion) => {
-        if (apiResponse.ok && apiResponse.options) {
-          // Transformer la réponse API
-          this.questions = [{
-            id: 1,
-            word: apiResponse.root,
-            correctAnswer: apiResponse.scheme,
-            options: apiResponse.options,
-            correctIndex: apiResponse.correct_index,
-            type: 'conjugation'
-          }];
-          this.totalQuestions = this.questions.length;
-          this.currentQuestion = this.questions[0];
+      next: (res: GameQuestion) => {
+        if (res.ok && res.options) {
+          this.question = res;
+          this.loading = false;
         } else {
-          this.questions = mockQuestions;
-          this.totalQuestions = mockQuestions.length;
-          this.currentQuestion = mockQuestions[0];
+          this.error = 'Erreur lors du chargement de la question.';
+          this.loading = false;
         }
-        this.loading = false;
       },
-      error: (err: Error) => {
-        console.warn('API Error, using mock data:', err);
-        this.questions = mockQuestions;
-        this.totalQuestions = mockQuestions.length;
-        this.currentQuestion = mockQuestions[0];
+      error: (err) => {
+        console.error(err);
+        this.error = 'Erreur de connexion au serveur.';
         this.loading = false;
       }
     });
   }
 
-  selectAnswer(index: number) {
-    if (this.showResult || !this.currentQuestion) return;
-    
+  selectOption(index: number) {
+    if (this.showResult) return;
+
     this.selectedIndex = index;
-    this.isCorrect = index === this.currentQuestion.correctIndex;
     this.showResult = true;
-    
-    if (this.isCorrect) {
+
+    if (this.question && index === this.question.correct_index) {
+      this.isCorrect = true;
       this.score++;
+    } else {
+      this.isCorrect = false;
     }
   }
 
   nextQuestion() {
-    if (this.currentQuestionIndex < this.questions.length - 1) {
-      this.currentQuestionIndex++;
-      this.currentQuestion = this.questions[this.currentQuestionIndex];
-      this.selectedIndex = null;
-      this.showResult = false;
+    if (this.currentIndex < this.totalQuestions - 1) {
+      this.currentIndex++;
+      this.loadQuestion();
     } else {
       this.gameFinished = true;
     }
   }
 
-  restartGame() {
-    this.currentQuestionIndex = 0;
-    this.score = 0;
-    this.selectedIndex = null;
-    this.showResult = false;
-    this.gameFinished = false;
-    this.loadGame();
-  }
+  getButtonClass(index: number): string {
+    if (!this.showResult) return '';
 
-  get isLastQuestion(): boolean {
-    return this.currentQuestionIndex === this.questions.length - 1;
+    if (index === this.question.correct_index) {
+      return 'correct-btn'; // Vert
+    }
+
+    if (index === this.selectedIndex && !this.isCorrect) {
+      return 'wrong-btn'; // Rouge
+    }
+
+    return '';
   }
 
   getScoreMessage(): string {

@@ -26,6 +26,9 @@ private:
     };
 
     std::vector<Bucket> table;
+    std::size_t count;
+
+    void resize();
 
     std::size_t hash(const std::u32string& s) const;
 };

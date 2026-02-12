@@ -1,7 +1,8 @@
 #include "hash_table.h"
+#include <iostream>
 
 HashTable::HashTable(std::size_t capacity)
-    : table(capacity) {}
+    : table(capacity), count(0) {}
 
 std::size_t HashTable::hash(const std::u32string& s) const {
     std::size_t h = 1469598103934665603ull;
@@ -12,15 +13,41 @@ std::size_t HashTable::hash(const std::u32string& s) const {
     return h;
 }
 
+void HashTable::resize() {
+    std::size_t new_capacity = table.size() * 2;
+    std::vector<Bucket> old_table = table;
+
+    table.assign(new_capacity, Bucket{});
+    count = 0;
+
+    for (const auto& bucket : old_table) {
+        if (bucket.used && !bucket.deleted) {
+            put(bucket.entry.name, bucket.entry.templ);
+        }
+    }
+}
+
 void HashTable::put(const std::u32string& name, const std::u32string& templ) {
-    if (table.empty()) return;
+    if (count >= table.size() * 0.7) {
+        resize();
+    }
+
     std::size_t idx = hash(name) % table.size();
     for (std::size_t i = 0; i < table.size(); ++i) {
         std::size_t j = (idx + i) % table.size();
-        if (!table[j].used || table[j].deleted || table[j].entry.name == name) {
+        
+        // Slot vide ou supprimé -> insertion
+        if (!table[j].used || table[j].deleted) {
             table[j].used = true;
             table[j].deleted = false;
             table[j].entry.name = name;
+            table[j].entry.templ = templ;
+            count++;
+            return;
+        }
+        
+        // Mise à jour existante
+        if (table[j].used && !table[j].deleted && table[j].entry.name == name) {
             table[j].entry.templ = templ;
             return;
         }
@@ -32,9 +59,15 @@ SchemeEntry* HashTable::get(const std::u32string& name) {
     std::size_t idx = hash(name) % table.size();
     for (std::size_t i = 0; i < table.size(); ++i) {
         std::size_t j = (idx + i) % table.size();
-        if (!table[j].used && !table[j].deleted) return nullptr;
-        if (table[j].used && !table[j].deleted && table[j].entry.name == name)
+        
+        if (!table[j].used && !table[j].deleted) {
+            // Rencontré une case vide "jamais utilisée" -> fin de recherche
+            return nullptr;
+        }
+        
+        if (table[j].used && !table[j].deleted && table[j].entry.name == name) {
             return &table[j].entry;
+        }
     }
     return nullptr;
 }
@@ -44,9 +77,15 @@ void HashTable::remove(const std::u32string& name) {
     std::size_t idx = hash(name) % table.size();
     for (std::size_t i = 0; i < table.size(); ++i) {
         std::size_t j = (idx + i) % table.size();
-        if (!table[j].used && !table[j].deleted) return;
+        
+        if (!table[j].used && !table[j].deleted) return; // Pas trouvé
+        
         if (table[j].used && !table[j].deleted && table[j].entry.name == name) {
             table[j].deleted = true;
+            // On ne décrémente pas count pour simplifier (la case reste "occupée" pour le probing)
+            // Ou on pourrait, mais la condition de resize est basée sur `count`.
+            // Pour être précis, on pourrait compter les deleted séparément.
+            // Ici on simplifie.
             return;
         }
     }

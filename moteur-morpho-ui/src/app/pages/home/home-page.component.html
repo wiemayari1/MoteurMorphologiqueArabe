@@ -1,61 +1,46 @@
-<header class="dash-header">
-  <div class="dash-header__content">
-    <div class="dash-header__title">المحرّك الصرفي</div>
-  </div>
-</header>
+<app-page-shell title="المحرّك الصرفي" footerImageSrc="assets/illustrations/book.png">
+  <div class="dash-container">
+    <section class="dash-card">
+      <div class="dash-card__top">
+        <h2>القائمة الرئيسية</h2>
+      </div>
 
-<main class="dash">
-  <section class="dash-card">
-    <div class="dash-card__top">
-      <h2>القائمة</h2>
-    </div>
+      <section class="tiles">
+        <a class="tile" routerLink="/roots">
+          <div class="app-icon app-icon--teal">
+            <mat-icon class="app-icon__glyph">account_tree</mat-icon>
+          </div>
+          <div class="tile__label">الجذور</div>
+        </a>
 
-    <section class="tiles">
-      <a class="tile" routerLink="/roots">
-        <div class="app-icon app-icon--teal">
-          <mat-icon class="app-icon__glyph">account_tree</mat-icon>
-        </div>
-        <div class="tile__label">الجذور</div>
-      </a>
+        <a class="tile" routerLink="/schemes">
+          <div class="app-icon app-icon--cyan">
+            <mat-icon class="app-icon__glyph">grid_view</mat-icon>
+          </div>
+          <div class="tile__label">الأوزان</div>
+        </a>
 
-      <a class="tile" routerLink="/schemes">
-        <div class="app-icon app-icon--cyan">
-          <mat-icon class="app-icon__glyph">grid_view</mat-icon>
-        </div>
-        <div class="tile__label">الأوزان</div>
-      </a>
+        <a class="tile" routerLink="/generate">
+          <div class="app-icon app-icon--cyan">
+            <mat-icon class="app-icon__glyph">auto_fix_high</mat-icon>
+          </div>
+          <div class="tile__label">التوليد</div>
+        </a>
 
-      <a class="tile" routerLink="/generate">
-        <div class="app-icon app-icon--cyan">
-          <mat-icon class="app-icon__glyph">auto_fix_high</mat-icon>
-        </div>
-        <div class="tile__label">التوليد</div>
-      </a>
+        <a class="tile" routerLink="/validate">
+          <div class="app-icon app-icon--cyan">
+            <mat-icon class="app-icon__glyph">search</mat-icon>
+          </div>
+          <div class="tile__label">التحقّق</div>
+        </a>
 
-      <a class="tile" routerLink="/validate">
-        <div class="app-icon app-icon--cyan">
-          <mat-icon class="app-icon__glyph">search</mat-icon>
-        </div>
-        <div class="tile__label">التحقّق</div>
-      </a>
-
-      <a class="tile" routerLink="/game">
-        <div class="app-icon app-icon--cyan">
-          <mat-icon class="app-icon__glyph">sports_esports</mat-icon>
-        </div>
-        <div class="tile__label">اللعبة</div>
-      </a>
-
-      <a class="tile" routerLink="/edit">
-        <div class="app-icon app-icon--warm">
-          <mat-icon class="app-icon__glyph">settings</mat-icon>
-        </div>
-        <div class="tile__label">تعديل</div>
-      </a>
+        <a class="tile" routerLink="/game">
+          <div class="app-icon app-icon--cyan">
+            <mat-icon class="app-icon__glyph">sports_esports</mat-icon>
+          </div>
+          <div class="tile__label">اللعبة</div>
+        </a>
+      </section>
     </section>
-
-    <div class="footer-art">
-      <img class="book-img" src="assets/illustrations/book.png" alt="" />
-    </div>
-  </section>
-</main>
+  </div>
+</app-page-shell>

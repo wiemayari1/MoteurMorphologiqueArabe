@@ -128,9 +128,9 @@ export class GeneratePageComponent implements OnInit {
   roots: string[] = ['كتب', 'درس', 'علم', 'فتح', 'عمل'];
 
   schemes: { id?: number; name: string; pattern: string }[] = [
-    { name: 'فاعل',   pattern: 'فاعل'   },
-    { name: 'مفعول',  pattern: 'مفعول'  },
-    { name: 'كتاب',   pattern: 'فِعال'   },
+    { name: 'فاعل', pattern: 'فاعل' },
+    { name: 'مفعول', pattern: 'مفعول' },
+    { name: 'كتاب', pattern: 'فِعال' },
     { name: 'مفعّلة', pattern: 'مفعّلة' }
   ];
 
@@ -143,12 +143,12 @@ export class GeneratePageComponent implements OnInit {
   error: string | null = null;
 
   examples = [
-    { root: 'كتب', scheme: 'فاعل',   result: 'كاتب'   },
-    { root: 'كتب', scheme: 'مفعول',  result: 'مكتوب'  },
-    { root: 'درس', scheme: 'مفعّلة', result: 'مدرسة'  }
+    { root: 'كتب', scheme: 'فاعل', result: 'كاتب' },
+    { root: 'كتب', scheme: 'مفعول', result: 'مكتوب' },
+    { root: 'درس', scheme: 'مفعّلة', result: 'مدرسة' }
   ];
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService) { }
 
   ngOnInit() {
     this.loadData();
@@ -238,7 +238,7 @@ export class GeneratePageComponent implements OnInit {
 
   get canGenerate(): boolean {
     return !!((this.selectedRoot || this.customRoot).trim()) &&
-           !!((this.selectedScheme?.pattern || this.customScheme).trim());
+      !!((this.selectedScheme?.pattern || this.customScheme).trim());
   }
 
   generate() {
@@ -254,34 +254,21 @@ export class GeneratePageComponent implements OnInit {
     this.error = null;
     this.generatedWords = [];
 
-    // Simulation pour le moment – à remplacer par un vrai appel API plus tard
-    setTimeout(() => {
-      this.generatedWords = this.simulateGeneration(root, schemePattern);
-      this.loading = false;
-    }, 1200);
-  }
-
-  private simulateGeneration(root: string, scheme: string): string[] {
-    const results: string[] = [];
-
-    switch (scheme) {
-      case 'فاعل':
-        if (root.length >= 3) results.push(root[0] + 'ا' + root[1] + root[2]);
-        break;
-      case 'مفعول':
-        if (root.length >= 3) results.push('م' + root[0] + root[1] + 'و' + root[2]);
-        break;
-      case 'فِعال':
-        if (root.length >= 3) results.push(root[0] + 'ِ' + root[1] + 'ا' + root[2]);
-        break;
-      case 'مفعّلة':
-        if (root.length >= 3) results.push('م' + root[0] + root[1] + 'ّ' + root[2] + 'ة');
-        break;
-      default:
-        results.push(`${root} – ${scheme} (وزن غير مدعوم)`);
-    }
-
-    return results.length > 0 ? results : [`${root} (${scheme})`];
+    this.apiService.generate({ root, scheme: schemePattern }).subscribe({
+      next: (response) => {
+        this.loading = false;
+        if (response.ok && response.word) {
+          this.generatedWords = [response.word];
+        } else {
+          this.error = response.error || 'فشل التوليد';
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message || 'خطأ في الاتصال بالخادم';
+        console.error('Generation error:', err);
+      }
+    });
   }
 
   reset() {

@@ -1,128 +1,183 @@
+:host {
+  display: block;
+}
+
 .box {
-  padding: 20px;
-  max-width: 800px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  max-width: 900px;
   margin: 0 auto;
 }
 
 h2 {
-  color: #00695c;
-  margin-bottom: 20px;
+  color: #1a237e;
+  margin-bottom: 24px;
+  font-size: 24px;
+  border-bottom: 2px solid #e8eaf6;
+  padding-bottom: 12px;
   text-align: right;
+  margin-top: 0;
 }
 
 // Messages
+.success,
+.err,
+.info {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
 .success {
   background: #e8f5e9;
   color: #2e7d32;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  text-align: right;
+  border: 1px solid #c8e6c9;
 }
 
 .err {
   background: #ffebee;
   color: #c62828;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  text-align: right;
+  border: 1px solid #ffcdd2;
 }
 
 .info {
   background: #e3f2fd;
   color: #1565c0;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  text-align: right;
+  border: 1px solid #bbdefb;
 }
 
 // Sections
+.add-section {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+}
+
 .row {
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 16px;
   flex-wrap: wrap;
 
   mat-form-field {
     flex: 1;
     min-width: 200px;
   }
+
+  button {
+    height: 56px;
+  }
 }
 
 .search-section {
-  align-items: center;
-  
+  margin-bottom: 16px;
+
   .search-field {
     flex: 1;
   }
-  
+
   .count {
-    color: #666;
-    font-size: 14px;
+    background: #e0f2f1;
+    color: #00695c;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
   }
 }
 
 // Liste scrollable
 .list-container {
-  max-height: 400px;  // ✅ Limite la hauteur
-  overflow-y: auto;   // ✅ Scrollbar si trop long
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-top: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: white;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cfd8dc;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #b0bec5;
+  }
 }
 
 .list {
   .item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.2s;
-    
+    padding: 14px 20px;
+    border-bottom: 1px solid #f5f5f5;
+    transition: all 0.2s ease;
+    cursor: default;
+
     &:hover {
-      background: #f5f5f5;
+      background: #f0f4f8;
+      padding-right: 24px; // subtle movement
     }
-    
+
     &:last-child {
       border-bottom: none;
     }
-    
+
     .number {
-      width: 30px;
-      height: 30px;
-      background: #00695c;
-      color: white;
+      width: 32px;
+      height: 32px;
+      background: #e0f2f1;
+      color: #00695c;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 14px;
-      margin-left: 12px;
+      font-weight: bold;
+      margin-left: 16px;
     }
-    
+
     .root-text {
       flex: 1;
-      font-size: 18px;
-      font-weight: 500;
-      color: #333;
+      font-size: 20px;
+      font-weight: bold;
+      color: #37474f;
+      font-family: 'Cairo', sans-serif;
     }
-    
+
     .meaning {
-      color: #666;
+      color: #78909c;
       font-size: 14px;
-      margin-left: 12px;
+      margin-left: 16px;
+      background: #fafafa;
+      padding: 4px 8px;
+      border-radius: 4px;
     }
-    
+
     .delete-btn {
-      opacity: 0;  // Caché par défaut
-      transition: opacity 0.2s;
-    }
-    
-    &:hover .delete-btn {
-      opacity: 1;  // Visible au survol
+      opacity: 0.3;
+      transition: all 0.2s;
+
+      &:hover {
+        opacity: 1;
+        color: #d32f2f;
+        transform: scale(1.1);
+      }
     }
   }
 }
@@ -130,14 +185,20 @@ h2 {
 // État vide
 .empty {
   text-align: center;
-  padding: 40px;
-  color: #999;
-  
+  padding: 60px 20px;
+  color: #b0bec5;
+
   mat-icon {
-    font-size: 48px;
-    width: 48px;
-    height: 48px;
-    margin-bottom: 16px;
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: 18px;
+    margin: 0;
   }
 }
 
@@ -145,17 +206,19 @@ h2 {
 @media (max-width: 600px) {
   .row {
     flex-direction: column;
-    
+    align-items: stretch;
+
     mat-form-field {
       width: 100%;
     }
-    
+
     button {
       width: 100%;
+      margin-bottom: 8px;
     }
   }
-  
-  .list-container {
-    max-height: 300px;
+
+  .box {
+    padding: 16px;
   }
 }
