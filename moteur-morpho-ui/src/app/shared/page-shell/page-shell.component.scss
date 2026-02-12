@@ -1,0 +1,81 @@
+.page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  padding-bottom: 40px;
+}
+
+.page-header {
+  background: linear-gradient(135deg, #006064 0%, #00838f 100%);
+  color: white;
+  padding: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  
+  .header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  
+  .home-btn {
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.05);
+    }
+    
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  .page-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+    flex: 1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.5px;
+  }
+  
+  .header-spacer {
+    width: 48px; // Même largeur que le bouton home pour centrer le titre
+  }
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 32px auto;
+  padding: 0 24px;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .page-header {
+    .page-title {
+      font-size: 22px;
+    }
+    
+    .header-content {
+      padding: 12px 16px;
+    }
+  }
+  
+  .page-content {
+    margin: 20px auto;
+    padding: 0 16px;
+  }
+}

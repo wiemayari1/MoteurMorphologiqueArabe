@@ -1,28 +1,158 @@
-<mat-card class="box">
-  <h2>التوليد</h2>
+<app-page-shell cardTitle="التوليد" footerImageSrc="assets/illustrations/book.png">
+  <mat-card class="generate-card">
+    <h2 class="page-title">توليد الكلمات</h2>
+    <p class="subtitle">اختر جذراً ووزناً لتوليد كلمة عربية</p>
 
-  <div class="row">
-    <mat-form-field appearance="outline">
-      <mat-label>الجذر (٣ أحرف)</mat-label>
-      <input matInput [(ngModel)]="root" placeholder="كتب" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>الوزن</mat-label>
-      <input matInput [(ngModel)]="scheme" placeholder="مفعول" />
-    </mat-form-field>
-  </div>
-
-  <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading">
-    توليد
-  </button>
-
-  <div class="result" *ngIf="res">
-    <div *ngIf="res.ok; else err">
-      <div class="ok">النتيجة: <b>{{res.word}}</b></div>
+    <!-- Chargement des données -->
+    <div class="loading-data" *ngIf="loadingData">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>جاري تحميل البيانات...</p>
     </div>
-    <ng-template #err>
-      <div class="bad">خطأ: {{res.error}}</div>
-    </ng-template>
-  </div>
-</mat-card>
+
+    <!-- Erreur de chargement -->
+    <div class="error-message" *ngIf="error && !loadingData">
+      <mat-icon>error</mat-icon>
+      {{ error }}
+      <button mat-button (click)="loadData()">إعادة المحاولة</button>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="form-section" *ngIf="!loadingData">
+      
+      <!-- Sélection du Jadhr -->
+      <div class="input-group">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>اختر الجذر</mat-label>
+          <mat-select [(ngModel)]="selectedRoot">
+            <mat-option value="">-- اختر جذراً --</mat-option>
+            <mat-option *ngFor="let r of roots" [value]="r.root">
+              {{ r.root }}
+              <span class="meaning" *ngIf="r.meaning">({{ r.meaning }})</span>
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>format_size</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- Sélection du Wazn -->
+      <div class="input-group">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>اختر الوزن</mat-label>
+          <mat-select [(ngModel)]="selectedScheme">
+            <mat-option value="">-- اختر وزناً --</mat-option>
+            <mat-option *ngFor="let s of schemes" [value]="s.template">
+              <span class="scheme-name">{{ s.name }}</span>
+              <span class="scheme-template">({{ s.template }})</span>
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>format_shapes</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- Ou saisie manuelle -->
+      <div class="manual-input">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>أو أدخل الجذر يدوياً</mat-label>
+          <input matInput [(ngModel)]="selectedRoot" maxlength="3" placeholder="كتب" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>أو أدخل الوزن يدوياً</mat-label>
+          <input matInput [(ngModel)]="selectedScheme" placeholder="فَاعَلَ" />
+        </mat-form-field>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="actions">
+        <button mat-raised-button 
+                color="primary" 
+                (click)="submit()" 
+                [disabled]="loading || !selectedRoot || !selectedScheme"
+                class="generate-btn">
+          <mat-icon *ngIf="!loading">auto_fix_high</mat-icon>
+          <mat-icon *ngIf="loading" class="spin">refresh</mat-icon>
+          {{ loading ? 'جاري التوليد...' : 'توليد' }}
+        </button>
+
+        <button mat-stroked-button 
+                (click)="reset()" 
+                [disabled]="loading">
+          <mat-icon>clear</mat-icon>
+          إعادة تعيين
+        </button>
+      </div>
+    </div>
+
+    <!-- Résultat -->
+    <div class="result-section" *ngIf="res">
+      
+      <!-- Succès -->
+      <div class="success-result" *ngIf="res.ok; else errorResult">
+        <div class="result-header">
+          <mat-icon class="success-icon">check_circle</mat-icon>
+          <span>تم التوليد بنجاح!</span>
+        </div>
+
+        <div class="generation-formula">
+          <div class="formula-item">
+            <span class="label">الجذر:</span>
+            <span class="value root">{{ selectedRoot }}</span>
+          </div>
+          
+          <span class="operator">+</span>
+          
+          <div class="formula-item">
+            <span class="label">الوزن:</span>
+            <span class="value scheme">{{ getSelectedSchemeName() }}</span>
+          </div>
+          
+          <span class="operator">=</span>
+          
+          <div class="formula-item result-item">
+            <span class="label">النتيجة:</span>
+            <span class="value result-word">{{ res.word }}</span>
+          </div>
+        </div>
+
+        <div class="result-details" *ngIf="res.root || res.scheme">
+          <p><strong>الجذر المستخدم:</strong> {{ res.root }}</p>
+          <p><strong>الوزن المستخدم:</strong> {{ res.scheme }}</p>
+        </div>
+      </div>
+
+      <!-- Erreur -->
+      <ng-template #errorResult>
+        <div class="error-result">
+          <mat-icon class="error-icon">error</mat-icon>
+          <h3>حدث خطأ</h3>
+          <p>{{ res.error }}</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Exemples -->
+    <div class="examples" *ngIf="!res && !loading">
+      <h4>أمثلة:</h4>
+      <div class="example-list">
+        <div class="example-item" (click)="selectedRoot='كتب'; selectedScheme='فَاعَلَ'">
+          <span class="ex-root">كتب</span>
+          <span class="ex-scheme">فَاعَلَ</span>
+          <span class="ex-arrow">→</span>
+          <span class="ex-result">كاتب</span>
+        </div>
+        <div class="example-item" (click)="selectedRoot='كتب'; selectedScheme='مَفْعُول'">
+          <span class="ex-root">كتب</span>
+          <span class="ex-scheme">مَفْعُول</span>
+          <span class="ex-arrow">→</span>
+          <span class="ex-result">مكتوب</span>
+        </div>
+        <div class="example-item" (click)="selectedRoot='درس'; selectedScheme='مَفْعَلَة'">
+          <span class="ex-root">درس</span>
+          <span class="ex-scheme">مَفْعَلَة</span>
+          <span class="ex-arrow">→</span>
+          <span class="ex-result">مدرسة</span>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+</app-page-shell>

@@ -1,23 +1,51 @@
-<mat-card class="box" *ngIf="!finished; else end">
-  <h2>اللعبة</h2>
-  <p>اختر الإجابة الصحيحة:</p>
+<app-page-shell title="اللعبة">
+  <div class="game-container">
+    
+    <div class="score-board">
+      <span>النقاط: {{ score }} / {{ totalQuestions }}</span>
+    </div>
 
-  <div class="q">
-    الجذر: <b>{{questions[i].root}}</b> — الوزن: <b>{{questions[i].scheme}}</b>
+    <div *ngIf="loading" class="loading">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <p>جاري التحميل...</p>
+    </div>
+
+    <mat-card *ngIf="!loading && question" class="question-card">
+      <mat-card-header>
+        <mat-card-title>ما هو الكلمة المشتقة؟</mat-card-title>
+        <mat-card-subtitle>
+          الجذر: <strong>{{ question.root }}</strong> | 
+          الوزن: <strong>{{ question.scheme }}</strong>
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="options-grid">
+          <button 
+            mat-raised-button
+            *ngFor="let option of question.options; let i = index"
+            [class]="getButtonClass(i)"
+            (click)="selectOption(i)"
+            [disabled]="showResult">
+            {{ option }}
+          </button>
+        </div>
+
+        <div *ngIf="showResult" class="result" [class.correct]="isCorrect" [class.wrong]="!isCorrect">
+          <h3 *ngIf="isCorrect">✅ أحسنت! الإجابة صحيحة</h3>
+          <h3 *ngIf="!isCorrect">❌ خطأ! الإجابة الصحيحة هي: {{ question.options[question.correct_index] }}</h3>
+          
+          <button mat-raised-button color="primary" (click)="nextQuestion()">
+            السؤال التالي →
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <div *ngIf="!loading && !question" class="error">
+      <p>حدث خطأ في تحميل اللعبة</p>
+      <button mat-raised-button (click)="loadQuestion()">إعادة المحاولة</button>
+    </div>
+
   </div>
-
-  <div class="buttons">
-    <button mat-raised-button color="primary" (click)="pick('A')">اختيار A</button>
-    <button mat-stroked-button (click)="pick('B')">اختيار B</button>
-  </div>
-
-  <div class="meta">السؤال {{i+1}} / {{questions.length}}</div>
-</mat-card>
-
-<ng-template #end>
-  <mat-card class="box">
-    <h2>النهاية</h2>
-    <p>النتيجة: <b>{{score}}</b> / {{questions.length}}</p>
-    <button mat-raised-button color="primary" (click)="reset()">إعادة</button>
-  </mat-card>
-</ng-template>
+</app-page-shell>

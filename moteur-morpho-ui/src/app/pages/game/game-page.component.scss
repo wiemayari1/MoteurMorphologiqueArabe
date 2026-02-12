@@ -1,10 +1,190 @@
-.box{ border-radius: 18px; border: 1px solid rgba(2,81,89,0.10); }
-h2{ margin-top: 0; color: var(--mm-primary); }
-.q{
-  margin: 12px 0;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(122,184,191,0.20);
+.game-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
 }
-.buttons{ display: flex; gap: 10px; flex-wrap: wrap; }
-.meta{ margin-top: 10px; color: rgba(6,36,39,0.7); }
+
+.game-stats {
+  text-align: center;
+  margin-bottom: 24px;
+  
+  .score-badge {
+    background: white;
+    padding: 16px 32px;
+    border-radius: 50px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+    
+    .score-label {
+      font-size: 18px;
+      color: #666;
+    }
+    
+    .score-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #006064;
+    }
+  }
+  
+  .question-counter {
+    margin-top: 8px;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.game-progress {
+  max-width: 400px;
+  margin: 0 auto;
+  height: 8px;
+  border-radius: 4px;
+  
+  ::ng-deep .mat-mdc-progress-bar-fill {
+    background: linear-gradient(90deg, #006064, #00838f) !important;
+  }
+}
+
+.loading-state, .error-state {
+  text-align: center;
+  padding: 40px;
+  
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e0f7fa;
+    border-top-color: #006064;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  }
+  
+  .error-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #f44336;
+    margin-bottom: 16px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.game-card {
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+.question-section {
+  .question-text {
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 32px;
+    color: #006064;
+  }
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+  
+  .option-btn {
+    padding: 20px;
+    font-size: 18px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    
+    &:hover:not([disabled]) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    &.correct {
+      background: #4caf50 !important;
+      color: white !important;
+    }
+    
+    &.wrong {
+      background: #f44336 !important;
+      color: white !important;
+    }
+  }
+}
+
+.result-section {
+  text-align: center;
+  
+  .result-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 20px;
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 8px;
+    
+    &.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    &.failure {
+      background: #ffebee;
+      color: #c62828;
+    }
+    
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+}
+
+.results-card {
+  text-align: center;
+  padding: 48px;
+  
+  .final-results {
+    h2 {
+      color: #006064;
+      margin-bottom: 24px;
+    }
+    
+    .final-score {
+      margin: 24px 0;
+      
+      .score-number {
+        font-size: 72px;
+        font-weight: 700;
+        color: #006064;
+      }
+      
+      .score-total {
+        font-size: 36px;
+        color: #666;
+      }
+    }
+    
+    .score-message {
+      font-size: 24px;
+      color: #666;
+      margin-bottom: 32px;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .options-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -4,12 +4,17 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <algorithm>
+#include <random>
+#include <chrono>
+#include <cstdint>
 
 #include "morpho.h"
 #include "AVL.h"
 #include "hash_table.h"
 
 using std::string;
+using std::u32string;
 
 static string read_file_utf8(const string& path) {
     std::ifstream f(path, std::ios::binary);
@@ -43,6 +48,7 @@ struct Args {
 
     bool do_generate = false;
     bool do_validate = false;
+    bool do_game = false;
 
     string root_utf8;
     string scheme_name_utf8;
@@ -55,7 +61,8 @@ static void print_help(const char* prog) {
       << "  " << prog << " --data data/roots.txt --schemes data/schemes.txt [--json] COMMAND\n\n"
       << "Commands:\n"
       << "  --generate --root \"كتب\" --scheme \"مفعول\"\n"
-      << "  --validate --word \"مكتوب\" --root \"كتب\"\n\n"
+      << "  --validate --word \"مكتوب\" --root \"كتب\"\n"
+      << "  --game\n\n"
       << "Options:\n"
       << "  --json           Output JSON\n"
       << "  --data <path>    Path to roots file\n"
@@ -88,6 +95,8 @@ static bool parse_args(int argc, char** argv, Args& a) {
             a.do_generate = true;
         } else if (arg == "--validate") {
             a.do_validate = true;
+        } else if (arg == "--game") {
+            a.do_game = true;
         } else if (arg == "--root") {
             auto v = get_opt_value(i, argc, argv);
             if (!v) return false;
@@ -110,10 +119,13 @@ static bool parse_args(int argc, char** argv, Args& a) {
         std::cerr << "Missing --data or --schemes\n";
         return false;
     }
-    if (a.do_generate == a.do_validate) {
-        std::cerr << "Choose exactly one command: --generate OR --validate\n";
+    
+    int cmd_count = (a.do_generate ? 1 : 0) + (a.do_validate ? 1 : 0) + (a.do_game ? 1 : 0);
+    if (cmd_count != 1) {
+        std::cerr << "Choose exactly one command: --generate OR --validate OR --game\n";
         return false;
     }
+    
     if (a.do_generate) {
         if (a.root_utf8.empty() || a.scheme_name_utf8.empty()) {
             std::cerr << "Missing --root or --scheme for --generate\n";
@@ -159,6 +171,103 @@ static bool load_schemes_into_hash(const string& schemes_path, HashTable& ht) {
         ht.put(utf8_to_u32(name), utf8_to_u32(templ));
     }
     return true;
+}
+
+static int run_game(AVLTree& tree, HashTable& ht, bool json_output) {
+    std::vector<u32string> roots;
+    tree.getAllKeys([&](const AVLNode* n){
+        roots.push_back(n->key);
+    });
+    
+    std::vector<SchemeEntry> schemes = ht.allSchemes();
+    
+    if (roots.empty() || schemes.empty()) {
+        if (json_output) {
+            std::cout << "{\"ok\":false,\"error\":\"no_data\"}\n";
+        } else {
+            std::cerr << "Erreur: pas assez de données pour le jeu\n";
+        }
+        return 7;
+    }
+    
+    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<size_t> root_dist(0, roots.size() - 1);
+    std::uniform_int_distribution<size_t> scheme_dist(0, schemes.size() - 1);
+    
+    const u32string& random_root = roots[root_dist(rng)];
+    const SchemeEntry& random_scheme = schemes[scheme_dist(rng)];
+    
+    u32string correct_word;
+    try {
+        correct_word = apply_template(random_root, random_scheme.templ);
+    } catch (const std::exception& e) {
+        if (json_output) {
+            std::cout << "{\"ok\":false,\"error\":\"generation_failed\"}\n";
+        } else {
+            std::cerr << "Erreur génération: " << e.what() << "\n";
+        }
+        return 8;
+    }
+    
+    std::vector<u32string> options;
+    options.push_back(correct_word);
+    
+    int attempts = 0;
+    while (options.size() < 4 && attempts < 100) {
+        attempts++;
+        const u32string& wrong_root = roots[root_dist(rng)];
+        const SchemeEntry& wrong_scheme = schemes[scheme_dist(rng)];
+        
+        try {
+            u32string wrong_word = apply_template(wrong_root, wrong_scheme.templ);
+            
+            bool exists = false;
+            for (const auto& o : options) {
+                if (o == wrong_word) { exists = true; break; }
+            }
+            if (!exists) options.push_back(wrong_word);
+        } catch (...) {
+            continue;
+        }
+    }
+    
+    while (options.size() < 4) {
+        options.push_back(u32string(U"؟؟؟"));
+    }
+    
+    std::shuffle(options.begin(), options.end(), rng);
+    
+    int correct_index = -1;
+    for (size_t i = 0; i < options.size(); i++) {
+        if (options[i] == correct_word) {
+            correct_index = (int)i;
+            break;
+        }
+    }
+    
+    if (json_output) {
+        std::cout << "{\"ok\":true,"
+                  << "\"root\":\"" << json_escape(u32_to_utf8(random_root)) << "\","
+                  << "\"scheme\":\"" << json_escape(u32_to_utf8(random_scheme.name)) << "\","
+                  << "\"options\":[";
+        for (size_t i = 0; i < options.size(); i++) {
+            if (i) std::cout << ",";
+            std::cout << "\"" << json_escape(u32_to_utf8(options[i])) << "\"";
+        }
+        std::cout << "],\"correct_index\":" << correct_index << "}\n";
+    } else {
+        std::cout << "Jeu Morphologique\n";
+        std::cout << "=================\n";
+        std::cout << "Racine: " << u32_to_utf8(random_root) << "\n";
+        std::cout << "Schème: " << u32_to_utf8(random_scheme.name) << "\n";
+        std::cout << "Quel est le mot dérivé?\n";
+        for (size_t i = 0; i < options.size(); i++) {
+            std::cout << "  " << (i+1) << ") " << u32_to_utf8(options[i]) << "\n";
+        }
+        std::cout << "(Réponse correcte: " << (correct_index+1) << ")\n";
+    }
+    
+    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -232,13 +341,16 @@ int main(int argc, char** argv) {
         }
     }
 
-    // validate
+    if (a.do_game) {
+        return run_game(tree, ht, a.json);
+    }
+
     {
         auto word_u32 = utf8_to_u32(a.word_utf8);
         auto root_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
 
         bool ok = false;
-        std::vector<std::u32string> matched;
+        std::vector<u32string> matched;
 
         for (const auto& s : ht.allSchemes()) {
             auto maybe_r = extract_root_from_word(word_u32, s.templ);

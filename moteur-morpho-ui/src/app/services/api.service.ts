@@ -1,43 +1,181 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
-export type GenerateRequest = { root: string; scheme: string };
-export type GenerateResponse = { ok: boolean; word?: string; error?: string };
+// Interfaces
+export interface GenerateResponse {
+  ok: boolean;
+  word?: string;
+  root?: string;
+  scheme?: string;
+  error?: string;
+}
 
-export type ValidateRequest = { word: string; root: string };
-export type ValidateResponse = { ok: boolean; valid?: boolean; scheme?: string; error?: string };
+export interface ValidateResponse {
+  ok: boolean;
+  belongs?: boolean;
+  schemes?: string[];
+  error?: string;
+}
 
-@Injectable({ providedIn: 'root' })
+export interface GameQuestion {
+  ok: boolean;
+  root: string;
+  scheme: string;
+  options: string[];
+  correct_index: number;
+  error?: string;
+}
+
+export interface RootItem {
+  root: string;
+  meaning?: string;
+}
+
+export interface RootsResponse {
+  ok: boolean;
+  roots: RootItem[] | string[];
+  error?: string;
+}
+
+export interface SchemeItem {
+  name: string;
+  template: string;  // pattern comme "1َ2َ3َ"
+}
+
+export interface SchemesResponse {
+  ok: boolean;
+  schemes: SchemeItem[];
+  error?: string;
+}
+
+export interface ApiResponse {
+  ok: boolean;
+  error?: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
 export class ApiService {
-  private base = environment.apiBaseUrl;
+  private apiUrl = 'http://localhost:3001/api';
 
   constructor(private http: HttpClient) {}
 
-  generate(req: GenerateRequest) {
-    return this.http.post<GenerateResponse>(`${this.base}/api/generate`, req);
+  // ========== GESTION DES ERREURS ==========
+  private handleError(error: HttpErrorResponse) {
+    let errorMsg = 'خطأ في الاتصال بالخادم';
+    if (error.error instanceof ErrorEvent) {
+      errorMsg = `خطأ: ${error.error.message}`;
+    } else {
+      errorMsg = `رمز الخطأ: ${error.status}, الرسالة: ${error.message}`;
+    }
+    console.error('API Error:', error);
+    return throwError(() => new Error(errorMsg));
   }
 
-  validate(req: ValidateRequest) {
-    return this.http.post<ValidateResponse>(`${this.base}/api/validate`, req);
+  // ========== RACINES (الجذور) ==========
+  
+  // Récupérer toutes les racines
+  getRoots(): Observable<RootsResponse> {
+    return this.http.get<RootsResponse>(`${this.apiUrl}/roots`)
+      .pipe(catchError(this.handleError));
   }
 
-  // optionnel si tu ajoutes ces endpoints côté API
-  listRoots() {
-    return this.http.get<{ ok: boolean; roots: string[] }>(`${this.base}/api/roots`);
+  // Alias pour compatibilité
+  listRoots(): Observable<RootsResponse> {
+    return this.getRoots();
   }
-  addRoot(root: string) {
-    return this.http.post<{ ok: boolean }>(`${this.base}/api/roots`, { root });
+
+  // Ajouter une racine
+  addRoot(root: string, meaning: string = ''): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.apiUrl}/roots`, { 
+      root: root.trim(), 
+      meaning: meaning.trim() 
+    }).pipe(catchError(this.handleError));
   }
-  listSchemes() {
-    return this.http.get<{ ok: boolean; schemes: { name: string; templ: string }[] }>(
-      `${this.base}/api/schemes`
-    );
+
+  // NOUVEAU: Supprimer une racine
+  deleteRoot(root: string): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(
+      `${this.apiUrl}/roots/${encodeURIComponent(root.trim())}`
+    ).pipe(catchError(this.handleError));
   }
-  upsertScheme(name: string, templ: string) {
-    return this.http.post<{ ok: boolean }>(`${this.base}/api/schemes`, { name, templ });
+
+  // NOUVEAU: Rechercher une racine
+  searchRoot(query: string): Observable<RootsResponse> {
+    return this.http.get<RootsResponse>(
+      `${this.apiUrl}/roots/search?q=${encodeURIComponent(query.trim())}`
+    ).pipe(catchError(this.handleError));
   }
-  deleteScheme(name: string) {
-    return this.http.delete<{ ok: boolean }>(`${this.base}/api/schemes/${encodeURIComponent(name)}`);
+
+  // ========== SCHÉMAS (الأوزان) ==========
+  
+  // Récupérer tous les schémas
+  getSchemes(): Observable<SchemesResponse> {
+    return this.http.get<SchemesResponse>(`${this.apiUrl}/schemes`)
+      .pipe(catchError(this.handleError));
+  }
+
+  // Alias pour compatibilité
+  listSchemes(): Observable<SchemesResponse> {
+    return this.getSchemes();
+  }
+
+  // Ajouter un nouveau schéma
+  addScheme(name: string, template: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.apiUrl}/schemes`, { 
+      name: name.trim(), 
+      pattern: template.trim()  // Le backend attend "pattern" pas "template"
+    }).pipe(catchError(this.handleError));
+  }
+
+  // Mettre à jour un schéma existant
+  updateScheme(name: string, template: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(
+      `${this.apiUrl}/schemes/${encodeURIComponent(name.trim())}`, 
+      { pattern: template.trim() }
+    ).pipe(catchError(this.handleError));
+  }
+
+  // Supprimer un schéma
+  deleteScheme(name: string): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(
+      `${this.apiUrl}/schemes/${encodeURIComponent(name.trim())}`
+    ).pipe(catchError(this.handleError));
+  }
+
+  // ========== GÉNÉRATION (التوليد) ==========
+  
+  generate(data: { root: string; scheme: string }): Observable<GenerateResponse> {
+    return this.http.post<GenerateResponse>(`${this.apiUrl}/generate`, {
+      root: data.root.trim(),
+      scheme: data.scheme.trim()
+    }).pipe(catchError(this.handleError));
+  }
+
+  // ========== VALIDATION (التحقق) ==========
+  
+  validate(data: { word: string; root: string }): Observable<ValidateResponse> {
+    return this.http.post<ValidateResponse>(`${this.apiUrl}/validate`, {
+      word: data.word.trim(),
+      root: data.root.trim()
+    }).pipe(catchError(this.handleError));
+  }
+
+  // ========== JEU (اللعبة) ==========
+  
+  getGameQuestion(): Observable<GameQuestion> {
+    return this.http.get<GameQuestion>(`${this.apiUrl}/game/question`)
+      .pipe(catchError(this.handleError));
+  }
+
+  // NOUVEAU: Vérifier la réponse du jeu
+  checkGameAnswer(word: string, root: string): Observable<{ ok: boolean; correct: boolean }> {
+    return this.http.post<{ ok: boolean; correct: boolean }>(
+      `${this.apiUrl}/game/check`, 
+      { word, root }
+    ).pipe(catchError(this.handleError));
   }
 }

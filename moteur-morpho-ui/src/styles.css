@@ -1,21 +1,36 @@
-:root{
-  --mm-primary: #025159;
-  --mm-secondary: #3E848C;
-  --mm-accent: #7AB8BF;
-  --mm-bg: #C4EEF2;
-  --mm-warn: #A67458;
+/* Optimisations globales */
+* {
+  box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: "Amiri", system-ui, serif;
-  direction: rtl;
-  background: linear-gradient(180deg, #ffffff 0%, var(--mm-bg) 100%);
-  color: #062427;
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a { color: inherit; text-decoration: none; }
+/* Réduire les animations lourdes */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Optimisation des images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Cache pour les composants */
+.will-animate {
+  will-change: transform, opacity;
+}

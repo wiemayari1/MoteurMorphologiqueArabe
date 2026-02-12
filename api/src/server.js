@@ -1,226 +1,317 @@
 import express from 'express';
 import cors from 'cors';
-import { spawn } from 'node:child_process';
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { exec } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const REPO_ROOT = path.resolve(__dirname, '../..');
-
-// Ajuste si ton binaire a un autre nom / emplacement
-const ENGINE_PATH = path.join(REPO_ROOT, 'build', 'morpho_engine');
-const ROOTS_PATH = path.join(REPO_ROOT, 'data', 'roots.txt');
-const SCHEMES_PATH = path.join(REPO_ROOT, 'data', 'schemes.txt');
-
-const PORT = Number(process.env.PORT ?? 3000);
-
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: '1mb' }));
 
-function runEngine(args, timeoutMs = 8000) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(ENGINE_PATH, args, {
-      cwd: REPO_ROOT,
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
+// CORS corrigé pour accepter toutes les origines de développement
+app.use(cors({
+    origin: ['http://localhost:4200', 'http://localhost:4201', 'http://localhost:44539'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type']
+}));
 
-    let out = '';
-    let err = '';
+app.use(express.json());
 
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      reject(new Error('Timeout: moteur C++ trop lent ou bloqué'));
-    }, timeoutMs);
+const ENGINE_PATH = '/home/wiem/MoteurMorphologiqueArabe/build/morpho_engine';
+const DATA_PATH = '/home/wiem/MoteurMorphologiqueArabe/data/roots.txt';
+const SCHEMES_PATH = '/home/wiem/MoteurMorphologiqueArabe/data/schemes.txt';
 
-    child.stdout.on('data', (d) => (out += d.toString('utf8')));
-    child.stderr.on('data', (d) => (err += d.toString('utf8')));
-
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ code, out, err });
-    });
-  });
-}
-
-function ok(res, data = {}) {
-  return res.json({ ok: true, ...data });
-}
-
-function bad(res, status, message) {
-  return res.status(status).json({ ok: false, message });
-}
-
-async function readLines(filePath) {
-  const content = await fs.readFile(filePath, 'utf8');
-  return content
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-}
-
-async function writeLines(filePath, lines) {
-  const data = lines.join('\n') + '\n';
-  await fs.writeFile(filePath, data, 'utf8');
-}
-
-/** Health */
-app.get('/api/health', async (req, res) => {
-  ok(res, { enginePath: ENGINE_PATH, rootsPath: ROOTS_PATH, schemesPath: SCHEMES_PATH });
-});
-
-/** Generate: POST /api/generate body: { root, scheme } */
-app.post('/api/generate', async (req, res) => {
-  const { root, scheme } = req.body ?? {};
-  if (!root || !scheme) return bad(res, 400, 'root و scheme مطلوبين');
-
-  const args = [
-    '--data',
-    ROOTS_PATH,
-    '--schemes',
-    SCHEMES_PATH,
-    '--generate',
-    '--root',
-    root,
-    '--scheme',
-    scheme,
-    '--json'
-  ];
-
-  try {
-    const r = await runEngine(args);
-    if (r.code !== 0) return bad(res, 500, r.err || 'خطأ في المحرك');
-    // Le moteur doit renvoyer un JSON valide quand --json est activé
-    return res.type('json').send(r.out);
-  } catch (e) {
-    return bad(res, 500, e.message);
-  }
-});
-
-/** Validate: POST /api/validate body: { word, root } */
-app.post('/api/validate', async (req, res) => {
-  const { word, root } = req.body ?? {};
-  if (!word || !root) return bad(res, 400, 'word و root مطلوبين');
-
-  const args = [
-    '--data',
-    ROOTS_PATH,
-    '--schemes',
-    SCHEMES_PATH,
-    '--validate',
-    '--word',
-    word,
-    '--root',
-    root,
-    '--json'
-  ];
-
-  try {
-    const r = await runEngine(args);
-    if (r.code !== 0) return bad(res, 500, r.err || 'خطأ في المحرك');
-    return res.type('json').send(r.out);
-  } catch (e) {
-    return bad(res, 500, e.message);
-  }
-});
-
-/**
- * OPTIONNEL (pour UI pro): Roots CRUD minimal (fichier texte)
- * GET /api/roots -> { ok, roots: [] }
- * POST /api/roots body: { root }
- */
-app.get('/api/roots', async (req, res) => {
-  try {
-    const roots = await readLines(ROOTS_PATH);
-    ok(res, { roots });
-  } catch (e) {
-    bad(res, 500, e.message);
-  }
-});
-
-app.post('/api/roots', async (req, res) => {
-  const { root } = req.body ?? {};
-  if (!root) return bad(res, 400, 'root مطلوب');
-
-  try {
-    const roots = await readLines(ROOTS_PATH);
-    if (!roots.includes(root)) roots.push(root);
-    roots.sort((a, b) => a.localeCompare(b, 'ar'));
-    await writeLines(ROOTS_PATH, roots);
-    ok(res);
-  } catch (e) {
-    bad(res, 500, e.message);
-  }
-});
-
-/**
- * OPTIONNEL (pour UI pro): Schemes CRUD minimal (fichier texte)
- * Format line: name|templ
- * GET /api/schemes -> { ok, schemes: [{name,templ}] }
- * POST /api/schemes body: { name, templ } (upsert)
- * DELETE /api/schemes/:name
- */
-app.get('/api/schemes', async (req, res) => {
-  try {
-    const lines = await readLines(SCHEMES_PATH);
-    const schemes = lines
-      .map((l) => {
-        const i = l.indexOf('|');
-        if (i === -1) return null;
-        return { name: l.slice(0, i).trim(), templ: l.slice(i + 1).trim() };
-      })
-      .filter(Boolean);
-    ok(res, { schemes });
-  } catch (e) {
-    bad(res, 500, e.message);
-  }
-});
-
-app.post('/api/schemes', async (req, res) => {
-  const { name, templ } = req.body ?? {};
-  if (!name || !templ) return bad(res, 400, 'name و templ مطلوبين');
-
-  try {
-    const lines = await readLines(SCHEMES_PATH);
-    const map = new Map();
-
-    for (const l of lines) {
-      const i = l.indexOf('|');
-      if (i === -1) continue;
-      map.set(l.slice(0, i).trim(), l.slice(i + 1).trim());
+// Vérifier que les fichiers existent
+function ensureFilesExist() {
+    if (!fs.existsSync(DATA_PATH)) {
+        fs.writeFileSync(DATA_PATH, 'كتب\nدرس\nعلم\n');
     }
+    if (!fs.existsSync(SCHEMES_PATH)) {
+        fs.writeFileSync(SCHEMES_PATH, 'فَعَلَ|1َ2َ3َ\nفَاعَلَ|1َا2َ3َ\nمَفْعُول|مَ1ْ2ُو3\n');
+    }
+}
+ensureFilesExist();
 
-    map.set(name.trim(), templ.trim());
+function execEngine(args) {
+    return new Promise((resolve, reject) => {
+        const cmd = `"${ENGINE_PATH}" --data "${DATA_PATH}" --schemes "${SCHEMES_PATH}" --json ${args}`;
+        console.log('Executing:', cmd);
+        
+        exec(cmd, { encoding: 'utf8' }, (err, stdout, stderr) => {
+            if (err) {
+                console.error('Engine error:', err);
+                return reject(err);
+            }
+            try {
+                const result = JSON.parse(stdout);
+                resolve(result);
+            } catch (e) {
+                reject(new Error('Invalid JSON: ' + stdout));
+            }
+        });
+    });
+}
 
-    const out = [...map.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0], 'ar'))
-      .map(([n, t]) => `${n}|${t}`);
-
-    await writeLines(SCHEMES_PATH, out);
-    ok(res);
-  } catch (e) {
-    bad(res, 500, e.message);
-  }
+// ========== GÉNÉRATION (التوليد) ==========
+app.post('/api/generate', async (req, res) => {
+    try {
+        const { root, scheme } = req.body;
+        if (!root || !scheme) {
+            return res.status(400).json({ ok: false, error: 'missing_fields' });
+        }
+        const result = await execEngine(`--generate --root "${root}" --scheme "${scheme}"`);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
-app.delete('/api/schemes/:name', async (req, res) => {
-  const name = decodeURIComponent(req.params.name ?? '');
-  if (!name) return bad(res, 400, 'name مطلوب');
-
-  try {
-    const lines = await readLines(SCHEMES_PATH);
-    const out = lines.filter((l) => !l.startsWith(`${name}|`));
-    await writeLines(SCHEMES_PATH, out);
-    ok(res);
-  } catch (e) {
-    bad(res, 500, e.message);
-  }
+// ========== VALIDATION (التحقق) ==========
+app.post('/api/validate', async (req, res) => {
+    try {
+        const { word, root } = req.body;
+        if (!word || !root) {
+            return res.status(400).json({ ok: false, error: 'missing_fields' });
+        }
+        const result = await execEngine(`--validate --word "${word}" --root "${root}"`);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
+// ========== JEU (اللعبة) ==========
+app.get('/api/game/question', async (req, res) => {
+    try {
+        const result = await execEngine('--game');
+        res.json(result);
+    } catch (err) {
+        // Fallback si le moteur ne supporte pas --game
+        const roots = ['كتب', 'درس', 'علم'];
+        const schemes = ['فَعَلَ', 'فَاعَلَ', 'مَفْعُول'];
+        const randomRoot = roots[Math.floor(Math.random() * roots.length)];
+        const randomScheme = schemes[Math.floor(Math.random() * schemes.length)];
+        
+        res.json({
+            ok: true,
+            root: randomRoot,
+            scheme: randomScheme,
+            options: ['option1', 'option2', 'option3', randomRoot],
+            correct_index: 3
+        });
+    }
+});
+
+// NOUVEAU: Vérifier réponse du jeu
+app.post('/api/game/check', async (req, res) => {
+    try {
+        const { word, root } = req.body;
+        const result = await execEngine(`--validate --word "${word}" --root "${root}"`);
+        res.json({ ok: true, correct: result.belongs || false });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// ========== RACINES (الجذور) ==========
+
+// GET: Récupérer toutes les racines
+app.get('/api/roots', (req, res) => {
+    try {
+        const content = fs.readFileSync(DATA_PATH, 'utf8');
+        const roots = content.split('\n')
+            .filter(line => line.trim())
+            .map(line => ({ root: line.trim(), meaning: '' })); // Format objet pour Angular
+        
+        res.json({ ok: true, roots });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// NOUVEAU: GET /api/roots/search - Rechercher une racine
+app.get('/api/roots/search', (req, res) => {
+    try {
+        const { q } = req.query;
+        const content = fs.readFileSync(DATA_PATH, 'utf8');
+        const allRoots = content.split('\n').filter(line => line.trim());
+        
+        const filtered = q 
+            ? allRoots.filter(r => r.includes(q)).map(r => ({ root: r, meaning: '' }))
+            : allRoots.map(r => ({ root: r, meaning: '' }));
+            
+        res.json({ ok: true, roots: filtered });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// POST: Ajouter une racine
+app.post('/api/roots', (req, res) => {
+    try {
+        const { root, meaning } = req.body;
+        const cleanRoot = root ? root.trim() : '';
+        
+        if (!cleanRoot || cleanRoot.length !== 3) {
+            return res.status(400).json({ 
+                ok: false, 
+                error: 'invalid_root',
+                message: 'الجذر يجب أن يكون 3 أحرف'
+            });
+        }
+        
+        // Vérifier doublon
+        const content = fs.readFileSync(DATA_PATH, 'utf8');
+        const existing = content.split('\n').map(l => l.trim());
+        if (existing.includes(cleanRoot)) {
+            return res.status(409).json({ 
+                ok: false, 
+                error: 'duplicate',
+                message: 'هذا الجذر موجود مسبقاً'
+            });
+        }
+        
+        // Ajouter au fichier
+        fs.appendFileSync(DATA_PATH, cleanRoot + '\n');
+        res.json({ ok: true, root: cleanRoot, meaning: meaning || '' });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// NOUVEAU: DELETE /api/roots/:root - Supprimer une racine
+app.delete('/api/roots/:root', (req, res) => {
+    try {
+        const rootToDelete = decodeURIComponent(req.params.root).trim();
+        
+        let content = fs.readFileSync(DATA_PATH, 'utf8');
+        const lines = content.split('\n').filter(line => line.trim());
+        const filtered = lines.filter(line => line.trim() !== rootToDelete);
+        
+        if (filtered.length === lines.length) {
+            return res.status(404).json({ ok: false, error: 'not_found' });
+        }
+        
+        fs.writeFileSync(DATA_PATH, filtered.join('\n') + '\n');
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// ========== SCHÉMAS (الأوزان) ==========
+
+// GET: Récupérer tous les schémas
+app.get('/api/schemes', (req, res) => {
+    try {
+        const content = fs.readFileSync(SCHEMES_PATH, 'utf8');
+        const schemes = content.split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+                const [name, template] = line.split('|');
+                return { name: name.trim(), template: template.trim() };
+            });
+        res.json({ ok: true, schemes });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// POST: Ajouter un schéma
+app.post('/api/schemes', (req, res) => {
+    try {
+        const { name, pattern } = req.body;  // Angular envoie "pattern"
+        const template = pattern || req.body.template; // Fallback
+        
+        if (!name || !template) {
+            return res.status(400).json({ 
+                ok: false, 
+                error: 'missing_fields',
+                message: 'اسم الوزن والقالب مطلوبان'
+            });
+        }
+        
+        const cleanName = name.trim();
+        const cleanTemplate = template.trim();
+        
+        // Lire le fichier
+        let content = '';
+        try {
+            content = fs.readFileSync(SCHEMES_PATH, 'utf8');
+        } catch (e) {
+            // Fichier n'existe pas encore
+        }
+        
+        const lines = content.split('\n').filter(line => line.trim());
+        const existingIndex = lines.findIndex(line => line.startsWith(cleanName + '|'));
+        
+        if (existingIndex >= 0) {
+            // Modifier existant
+            lines[existingIndex] = `${cleanName}|${cleanTemplate}`;
+        } else {
+            // Ajouter nouveau
+            lines.push(`${cleanName}|${cleanTemplate}`);
+        }
+        
+        fs.writeFileSync(SCHEMES_PATH, lines.join('\n') + '\n');
+        res.json({ ok: true, name: cleanName, template: cleanTemplate });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// NOUVEAU: PUT /api/schemes/:name - Mettre à jour un schéma
+app.put('/api/schemes/:name', (req, res) => {
+    try {
+        const name = decodeURIComponent(req.params.name);
+        const { pattern } = req.body;
+        const template = pattern || req.body.template;
+        
+        if (!template) {
+            return res.status(400).json({ ok: false, error: 'missing_template' });
+        }
+        
+        let content = fs.readFileSync(SCHEMES_PATH, 'utf8');
+        const lines = content.split('\n').filter(line => line.trim());
+        const index = lines.findIndex(line => line.startsWith(name + '|'));
+        
+        if (index === -1) {
+            return res.status(404).json({ ok: false, error: 'not_found' });
+        }
+        
+        lines[index] = `${name}|${template}`;
+        fs.writeFileSync(SCHEMES_PATH, lines.join('\n') + '\n');
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// DELETE: Supprimer un schéma
+app.delete('/api/schemes/:name', (req, res) => {
+    try {
+        const name = decodeURIComponent(req.params.name);
+        
+        let content = fs.readFileSync(SCHEMES_PATH, 'utf8');
+        const lines = content.split('\n').filter(line => line.trim());
+        const filtered = lines.filter(line => !line.startsWith(name + '|'));
+        
+        if (filtered.length === lines.length) {
+            return res.status(404).json({ ok: false, error: 'not_found' });
+        }
+        
+        fs.writeFileSync(SCHEMES_PATH, filtered.join('\n') + '\n');
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// ========== DÉMARRAGE ==========
+const PORT = 3001;
 app.listen(PORT, () => {
-  console.log(`[api] listening on http://localhost:${PORT}`);
-  console.log(`[api] ENGINE_PATH=${ENGINE_PATH}`);
+    console.log(`✅ API démarrée sur http://localhost:${PORT}`);
+    console.log(`   Engine: ${ENGINE_PATH}`);
+    console.log(`   Data: ${DATA_PATH}`);
+    console.log(`   Schemes: ${SCHEMES_PATH}`);
 });

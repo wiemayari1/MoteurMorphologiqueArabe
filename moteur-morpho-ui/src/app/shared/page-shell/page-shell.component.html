@@ -1,0 +1,22 @@
+<header class="dash-header">
+  <div class="dash-header__content">
+    <div class="dash-header__title">{{ title }}</div>
+  </div>
+</header>
+
+<main class="dash">
+  <section class="dash-card">
+    <!-- ✅ إذا ما تحبّش العنوان الصغير (المحاط بالأحمر في بعض الصور)، خليه اختياري -->
+    <div class="dash-card__top" *ngIf="cardTitle && cardTitle.trim().length">
+      <h2>{{ cardTitle }}</h2>
+    </div>
+
+    <div class="dash-card__body">
+      <ng-content></ng-content>
+    </div>
+
+    <div class="footer-art" *ngIf="showFooterImage">
+      <img class="book-img" [src]="footerImageSrc" [alt]="footerImageAlt" />
+    </div>
+  </section>
+</main>

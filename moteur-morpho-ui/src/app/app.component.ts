@@ -1,19 +1,23 @@
-import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [
-    RouterOutlet, RouterLink, RouterLinkActive,
-    MatSidenavModule, MatToolbarModule, MatListModule, MatIconModule, MatButtonModule
-  ],
+  imports: [CommonModule, RouterOutlet],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
 })
-export class AppComponent {}
+export class AppComponent {
+  private router = inject(Router);
+  isHome = true;
+
+  constructor() {
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
+      const url = this.router.url.split('?')[0];
+      this.isHome = url === '' || url === '/';
+    });
+  }
+}

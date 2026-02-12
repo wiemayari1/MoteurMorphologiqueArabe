@@ -1,43 +1,61 @@
-<section class="hero">
-  <h1>محرّك البحث الصرفي و مولّد الاشتقاق</h1>
-  <p>
-    نظام يعتمد على <b>شجرة AVL</b> لفهرسة الجذور و <b>جدول تجزئة</b> للأوزان.
-  </p>
-</section>
+<header class="dash-header">
+  <div class="dash-header__content">
+    <div class="dash-header__title">المحرّك الصرفي</div>
+  </div>
+</header>
 
-<section class="grid">
-  <mat-card class="card">
-    <mat-icon>account_tree</mat-icon>
-    <h3>الجذور</h3>
-    <p>إضافة / بحث / عرض الجذور الثلاثية.</p>
-    <a mat-raised-button color="primary" routerLink="/roots">فتح</a>
-  </mat-card>
+<main class="dash">
+  <section class="dash-card">
+    <div class="dash-card__top">
+      <h2>القائمة</h2>
+    </div>
 
-  <mat-card class="card">
-    <mat-icon>grid_on</mat-icon>
-    <h3>الأوزان</h3>
-    <p>إدارة الأوزان داخل جدول التجزئة.</p>
-    <a mat-raised-button color="primary" routerLink="/schemes">فتح</a>
-  </mat-card>
+    <section class="tiles">
+      <a class="tile" routerLink="/roots">
+        <div class="app-icon app-icon--teal">
+          <mat-icon class="app-icon__glyph">account_tree</mat-icon>
+        </div>
+        <div class="tile__label">الجذور</div>
+      </a>
 
-  <mat-card class="card">
-    <mat-icon>auto_fix_high</mat-icon>
-    <h3>التوليد</h3>
-    <p>توليد كلمات مشتقة من جذر و وزن.</p>
-    <a mat-raised-button color="primary" routerLink="/generate">فتح</a>
-  </mat-card>
+      <a class="tile" routerLink="/schemes">
+        <div class="app-icon app-icon--cyan">
+          <mat-icon class="app-icon__glyph">grid_view</mat-icon>
+        </div>
+        <div class="tile__label">الأوزان</div>
+      </a>
 
-  <mat-card class="card">
-    <mat-icon>verified</mat-icon>
-    <h3>التحقّق</h3>
-    <p>هل تنتمي الكلمة إلى الجذر؟ مع تحديد الوزن.</p>
-    <a mat-raised-button color="primary" routerLink="/validate">فتح</a>
-  </mat-card>
+      <a class="tile" routerLink="/generate">
+        <div class="app-icon app-icon--cyan">
+          <mat-icon class="app-icon__glyph">auto_fix_high</mat-icon>
+        </div>
+        <div class="tile__label">التوليد</div>
+      </a>
 
-  <mat-card class="card">
-    <mat-icon>sports_esports</mat-icon>
-    <h3>اللعبة</h3>
-    <p>اختبار سريع مع نقاط في النهاية.</p>
-    <a mat-raised-button color="primary" routerLink="/game">فتح</a>
-  </mat-card>
-</section>
+      <a class="tile" routerLink="/validate">
+        <div class="app-icon app-icon--cyan">
+          <mat-icon class="app-icon__glyph">search</mat-icon>
+        </div>
+        <div class="tile__label">التحقّق</div>
+      </a>
+
+      <a class="tile" routerLink="/game">
+        <div class="app-icon app-icon--cyan">
+          <mat-icon class="app-icon__glyph">sports_esports</mat-icon>
+        </div>
+        <div class="tile__label">اللعبة</div>
+      </a>
+
+      <a class="tile" routerLink="/edit">
+        <div class="app-icon app-icon--warm">
+          <mat-icon class="app-icon__glyph">settings</mat-icon>
+        </div>
+        <div class="tile__label">تعديل</div>
+      </a>
+    </section>
+
+    <div class="footer-art">
+      <img class="book-img" src="assets/illustrations/book.png" alt="" />
+    </div>
+  </section>
+</main>
