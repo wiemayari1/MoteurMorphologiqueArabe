@@ -259,7 +259,7 @@ export class GeneratePageComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         this.error = err.message || 'خطأ في الاتصال بالخادم';
-        this.snackBar.open(this.error, 'إغلاق', { duration: 5000 });
+        this.snackBar.open(this.error || 'خطأ في الاتصال بالخادم', 'إغلاق', { duration: 5000 });
         console.error('Generation error:', err);
       }
     });

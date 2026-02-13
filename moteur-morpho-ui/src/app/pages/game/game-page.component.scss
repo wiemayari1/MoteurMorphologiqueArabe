@@ -1,3 +1,4 @@
+@use "sass:color";
 // Variables - Premium Palette
 $primary-color: #00838f;
 $secondary-color: #00acc1;
@@ -167,7 +168,7 @@ $shadow-lg: 0 15px 30px rgba(0, 0, 0, 0.15);
     border: 1px solid rgba($success-color, 0.2);
 
     .feedback-text {
-      color: darken($success-color, 15%);
+      color: color.adjust($success-color, $lightness: -15%);
     }
   }
 
@@ -176,7 +177,7 @@ $shadow-lg: 0 15px 30px rgba(0, 0, 0, 0.15);
     border: 1px solid rgba($error-color, 0.2);
 
     .feedback-text {
-      color: darken($error-color, 15%);
+      color: color.adjust($error-color, $lightness: -15%);
     }
   }
 

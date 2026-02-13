@@ -8,36 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
   selector: 'app-page-shell',
   standalone: true,
   imports: [CommonModule, RouterModule, MatIconModule, MatButtonModule],
-  template: `
-    <div class="page-container">
-      <!-- Header avec titre et bouton home -->
-      <header class="page-header">
-        <div class="header-content">
-          <button mat-icon-button class="home-btn" (click)="goHome()" aria-label="Retour à l'accueil">
-            <mat-icon>home</mat-icon>
-          </button>
-          <h1 class="page-title">{{ title }}</h1>
-          <div class="header-spacer"></div>
-        </div>
-      </header>
-      
-      <!-- Contenu de la page -->
-      <main class="page-content">
-        <ng-content></ng-content>
-      </main>
-
-      <!-- Illustration Book au bas de la page -->
-      <footer class="page-footer">
-        <div class="footer-art">
-          <img src="assets/illustrations/book.png" alt="Book Illustration" class="book-img">
-        </div>
-      </footer>
-    </div>
-  `,
+  templateUrl: './page-shell.component.html',
   styleUrls: ['./page-shell.component.scss']
 })
 export class PageShellComponent {
   @Input() title: string = '';
+  @Input() cardTitle: string = '';
+  @Input() showFooterImage: boolean = false;
+  @Input() footerImageSrc: string = 'assets/illustrations/book.png';
+  @Input() footerImageAlt: string = 'Illustration';
 
   constructor(public router: Router) { }
 
