@@ -1,68 +1,70 @@
+/* Roots Page Component - Using Design System */
 :host {
   display: block;
 }
 
 .box {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   max-width: 900px;
   margin: 0 auto;
 }
 
 h2 {
-  color: #1a237e;
-  margin-bottom: 24px;
-  font-size: 24px;
-  border-bottom: 2px solid #e8eaf6;
-  padding-bottom: 12px;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-2xl);
+  border-bottom: 2px solid var(--color-gray-200);
+  padding-bottom: var(--spacing-sm);
   text-align: right;
   margin-top: 0;
 }
 
-// Messages
+/* Messages */
 .success,
 .err,
 .info {
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-weight: 500;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-lg);
+  font-weight: var(--font-weight-medium);
+  animation: fadeIn 0.3s ease;
 }
 
 .success {
-  background: #e8f5e9;
-  color: #2e7d32;
-  border: 1px solid #c8e6c9;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
 }
 
 .err {
-  background: #ffebee;
-  color: #c62828;
-  border: 1px solid #ffcdd2;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error-border);
 }
 
 .info {
-  background: #e3f2fd;
-  color: #1565c0;
-  border: 1px solid #bbdefb;
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border: 1px solid var(--color-info-border);
 }
 
-// Sections
+/* Sections */
 .add-section {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 1px solid #e0e0e0;
+  background-color: var(--color-gray-50);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--color-gray-300);
 }
 
 .row {
   display: flex;
-  gap: 12px;
+  gap: var(--spacing-sm);
   align-items: center;
   flex-wrap: wrap;
 
@@ -77,61 +79,43 @@ h2 {
 }
 
 .search-section {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 
   .search-field {
     flex: 1;
   }
 
   .count {
-    background: #e0f2f1;
-    color: #00695c;
-    padding: 6px 12px;
+    background: rgba(11, 107, 116, 0.15);
+    color: var(--color-teal);
+    padding: 6px var(--spacing-sm);
     border-radius: 20px;
-    font-size: 13px;
-    font-weight: bold;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
   }
 }
 
-// Liste scrollable
+/* Liste scrollable */
 .list-container {
   max-height: 500px;
   overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  background: white;
-
-  /* Scrollbar styling */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #cfd8dc;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: #b0bec5;
-  }
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
 }
 
 .list {
   .item {
     display: flex;
     align-items: center;
-    padding: 14px 20px;
-    border-bottom: 1px solid #f5f5f5;
-    transition: all 0.2s ease;
+    padding: 14px var(--spacing-lg);
+    border-bottom: 1px solid var(--color-gray-100);
+    transition: all var(--transition-fast);
     cursor: default;
 
     &:hover {
-      background: #f0f4f8;
-      padding-right: 24px; // subtle movement
+      background: var(--color-gray-50);
+      padding-right: var(--spacing-xl);
     }
 
     &:last-child {
@@ -141,68 +125,68 @@ h2 {
     .number {
       width: 32px;
       height: 32px;
-      background: #e0f2f1;
-      color: #00695c;
-      border-radius: 50%;
+      background: rgba(11, 107, 116, 0.15);
+      color: var(--color-teal);
+      border-radius: var(--radius-round);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
-      margin-left: 16px;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-bold);
+      margin-left: var(--spacing-md);
     }
 
     .root-text {
       flex: 1;
-      font-size: 20px;
-      font-weight: bold;
-      color: #37474f;
-      font-family: 'Cairo', sans-serif;
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      font-family: var(--font-family-base);
     }
 
     .meaning {
-      color: #78909c;
-      font-size: 14px;
-      margin-left: 16px;
-      background: #fafafa;
-      padding: 4px 8px;
-      border-radius: 4px;
+      color: var(--color-gray-600);
+      font-size: var(--font-size-sm);
+      margin-left: var(--spacing-md);
+      background: var(--color-gray-50);
+      padding: 4px var(--spacing-sm);
+      border-radius: var(--radius-sm);
     }
 
     .delete-btn {
       opacity: 0.3;
-      transition: all 0.2s;
+      transition: all var(--transition-fast);
 
       &:hover {
         opacity: 1;
-        color: #d32f2f;
+        color: var(--color-error-light);
         transform: scale(1.1);
       }
     }
   }
 }
 
-// État vide
+/* État vide */
 .empty {
   text-align: center;
-  padding: 60px 20px;
-  color: #b0bec5;
+  padding: 60px var(--spacing-lg);
+  color: var(--color-gray-400);
 
   mat-icon {
     font-size: 64px;
     width: 64px;
     height: 64px;
-    margin-bottom: 20px;
+    margin-bottom: var(--spacing-lg);
     opacity: 0.5;
   }
 
   p {
-    font-size: 18px;
+    font-size: var(--font-size-lg);
     margin: 0;
   }
 }
 
-// Responsive
+/* Responsive */
 @media (max-width: 600px) {
   .row {
     flex-direction: column;
@@ -214,11 +198,11 @@ h2 {
 
     button {
       width: 100%;
-      margin-bottom: 8px;
+      margin-bottom: var(--spacing-sm);
     }
   }
 
   .box {
-    padding: 16px;
+    padding: var(--spacing-md);
   }
 }

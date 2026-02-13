@@ -1,22 +1,34 @@
-/* content */
+/* App Component - Main Content Container */
 .content {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 16px 18px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  min-height: 100vh;
 }
 
-/* HOME: plein largeur */
+/* HOME: Full width layout */
 .content--home {
-  max-width: 1200px; /* ajuste: 1200/1300 */
-  padding: 22px 22px;
+  max-width: 1200px;
+  padding: var(--spacing-lg);
 }
 
-/* responsive */
+/* Responsive */
 @media (max-width: 900px) {
   .content {
-    padding: 14px;
+    padding: var(--spacing-sm) var(--spacing-md);
   }
+
   .content--home {
-    padding: 14px;
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .content--home {
+    padding: var(--spacing-sm);
   }
 }
