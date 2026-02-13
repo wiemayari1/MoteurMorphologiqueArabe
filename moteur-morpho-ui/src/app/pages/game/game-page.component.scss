@@ -1,19 +1,19 @@
 @use "sass:color";
-// Variables - Premium Palette
-$primary-color: #00838f;
-$secondary-color: #00acc1;
-$accent-color: #ff9800;
-$success-color: #4caf50;
-$error-color: #f44336;
-$text-dark: #2c3e50;
-$text-light: #ecf0f1;
-$bg-gradient-start: #e0f7fa;
+// Variables - Premium Palette linked to styles.css
+$primary-color: var(--color-primary-dark);
+$secondary-color: var(--color-primary-light);
+$accent-color: var(--color-accent);
+$success-color: var(--color-success);
+$error-color: var(--color-error);
+$text-dark: var(--color-gray-900);
+$text-light: var(--color-white);
+$bg-gradient-start: var(--color-background);
 $bg-gradient-end: #ffffff;
-$glass-bg: rgba(255, 255, 255, 0.85);
+$glass-bg: rgba(255, 255, 255, 0.9);
 $glass-border: rgba(255, 255, 255, 0.5);
-$shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 8px 15px rgba(0, 0, 0, 0.1);
-$shadow-lg: 0 15px 30px rgba(0, 0, 0, 0.15);
+$shadow-sm: var(--shadow-sm);
+$shadow-md: var(--shadow-md);
+$shadow-lg: var(--shadow-lg);
 
 .game-container {
   max-width: 800px;
@@ -168,16 +168,20 @@ $shadow-lg: 0 15px 30px rgba(0, 0, 0, 0.15);
     border: 1px solid rgba($success-color, 0.2);
 
     .feedback-text {
-      color: color.adjust($success-color, $lightness: -15%);
+      color: var(--color-success);
+      /* Fallback or direct use */
+      filter: brightness(0.8);
+      /* CSS filter instead of sass function */
     }
   }
 
   &.failure {
-    background: rgba($error-color, 0.1);
-    border: 1px solid rgba($error-color, 0.2);
+    background: var(--color-error-bg);
+    border: 1px solid var(--color-error-border);
 
     .feedback-text {
-      color: color.adjust($error-color, $lightness: -15%);
+      color: var(--color-error);
+      filter: brightness(0.8);
     }
   }
 

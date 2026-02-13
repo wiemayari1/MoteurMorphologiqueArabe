@@ -246,12 +246,19 @@ export class GeneratePageComponent implements OnInit {
     this.error = null;
     this.generatedWords = [];
 
+    const safetyTimeout = setTimeout(() => {
+      if (this.loading) {
+        this.loading = false;
+        this.error = 'تجاوزت مهلة الانتظار. الخادم لا يستجيب.';
+      }
+    }, 15000);
+
     this.apiService.generate({ root, scheme: schemePattern }).subscribe({
       next: (response) => {
+        clearTimeout(safetyTimeout);
         this.loading = false;
         if (response.ok && response.word) {
           this.generatedWords = [response.word];
-          // Result is now displayed in page per feedback
         } else {
           this.error = response.error || 'فشل التوليد';
           if (this.error === 'scheme_not_found') {
@@ -260,6 +267,7 @@ export class GeneratePageComponent implements OnInit {
         }
       },
       error: (err) => {
+        clearTimeout(safetyTimeout);
         this.loading = false;
         this.error = err.message || 'خطأ في الاتصال بالخادم';
         this.snackBar.open(this.error || 'خطأ في الاتصال بالخادم', 'إغلاق', { duration: 5000 });

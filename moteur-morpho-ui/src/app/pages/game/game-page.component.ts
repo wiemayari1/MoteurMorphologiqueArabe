@@ -69,10 +69,19 @@ export class GamePageComponent implements OnInit, OnDestroy {
     this.selectedIndex = null;
     this.question = null;
 
+    // Timeout de sécurité côté composant (au cas où l'API est très lente)
+    const safetyTimeout = setTimeout(() => {
+      if (this.loading) {
+        this.loading = false;
+        this.error = 'تجاوزت مهلة الانتظار. الخادم لا يستجيب.';
+      }
+    }, 12000);
+
     this.apiService.getGameQuestion().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (res: GameQuestion) => {
+        clearTimeout(safetyTimeout);
         this.loading = false;
         if (res.ok && res.options) {
           this.question = res;
@@ -81,6 +90,7 @@ export class GamePageComponent implements OnInit, OnDestroy {
         }
       },
       error: (err) => {
+        clearTimeout(safetyTimeout);
         console.error(err);
         this.error = 'فشل تحميل السؤال. تحقق من اتصالك بالخادم.';
         this.loading = false;

@@ -39,18 +39,20 @@ export class ValidatePageComponent {
   submit() {
     this.res = null;
     this.loading = true;
-    this.api.validate({ word: this.word, root: this.root }).subscribe({
-      next: (r) => {
-        this.res = r;
-        this.errorMessage = null;
-      },
-      error: (e) => {
-        this.res = null;
-        this.errorMessage = e?.message ?? 'خطأ في الاتصال بالخادم';
-        this.snackBar.open(this.errorMessage!, 'إغلاق', { duration: 4000 });
-      },
-      complete: () => (this.loading = false),
-    });
+    this.api.validate({ word: this.word, root: this.root })
+      .subscribe({
+        next: (r) => {
+          this.res = r;
+          this.errorMessage = null;
+          this.loading = false;
+        },
+        error: (e) => {
+          this.res = null;
+          this.errorMessage = e?.message ?? 'خطأ في الاتصال بالخادم';
+          this.snackBar.open(this.errorMessage!, 'إغلاق', { duration: 4000 });
+          this.loading = false;
+        }
+      });
   }
 
   onInputChange() {

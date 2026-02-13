@@ -171,7 +171,10 @@ export class ApiService {
 
   getGameQuestion(): Observable<GameQuestion> {
     return this.http.get<GameQuestion>(`${this.apiUrl}/game/question`)
-      .pipe(catchError(this.handleError));
+      .pipe(
+        timeout(10000), // 10s timeout
+        catchError(this.handleError)
+      );
   }
 
   // NOUVEAU: Vérifier la réponse du jeu
@@ -179,6 +182,9 @@ export class ApiService {
     return this.http.post<{ ok: boolean; correct: boolean }>(
       `${this.apiUrl}/game/check`,
       { word, root }
-    ).pipe(catchError(this.handleError));
+    ).pipe(
+      timeout(10000),
+      catchError(this.handleError)
+    );
   }
 }

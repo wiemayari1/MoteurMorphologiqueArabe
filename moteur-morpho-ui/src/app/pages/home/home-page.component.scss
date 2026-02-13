@@ -201,16 +201,15 @@
 }
 
 /* Icon Color Variants - Using Design System Colors */
-/* Icon Color Variants - Icons colored, background light */
 .app-icon--teal {
   .app-icon__glyph {
-    color: #1a6b6b;
+    color: var(--color-primary-light);
   }
 }
 
 .app-icon--cyan {
   .app-icon__glyph {
-    color: #2c8f9a;
+    color: var(--color-secondary);
   }
 }
 
@@ -228,7 +227,7 @@
 
 .app-icon--brown {
   .app-icon__glyph {
-    color: #8b7355;
+    color: var(--color-accent);
   }
 }
 

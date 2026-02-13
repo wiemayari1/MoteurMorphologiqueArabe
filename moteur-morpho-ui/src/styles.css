@@ -5,15 +5,22 @@
 /* CSS Custom Properties - Color Palette */
 :root {
   /* Primary Colors */
-  /* Primary Colors - Updated for #1a6b6ba branding */
-  --color-primary-dark: #1a6b6b;
-  --color-primary-light: #268a8a;
-  --color-secondary: #3aa6a6;
-  --color-background: #f4f9f9;
+  /* Primary Colors - Updated to AdobeColor Palette */
+  --color-primary-dark: #025159;
+  /* Deep Blue-Green */
+  --color-primary-light: #3E848C;
+  /* Light Teal */
+  --color-secondary: #7AB8BF;
+  /* Grey-Blue */
+  --color-accent: #A67458;
+  /* Terracotta/Orange */
 
-  /* Accent Colors */
-  --color-teal: #0b6b74;
-  --color-cyan: #2c8f9a;
+  --color-background: #F4F8F9;
+  /* Light neutral background */
+
+  /* Derived/Semantic Colors */
+  --color-teal: #3E848C;
+  --color-cyan: #7AB8BF;
 
   /* Semantic Colors */
   --color-success: #2e7d32;
@@ -30,9 +37,9 @@
   --color-warning-bg: #fff3e0;
   --color-warning-border: #ffe0b2;
 
-  --color-info: #0277bd;
-  --color-info-bg: #e3f2fd;
-  --color-info-border: #bbdefb;
+  --color-info: #025159;
+  --color-info-bg: #e0f2f1;
+  --color-info-border: #b2dfdb;
 
   /* Neutral Colors */
   --color-white: #ffffff;
@@ -181,7 +188,7 @@ a {
 }
 
 a:hover {
-  color: var(--color-secondary);
+  color: var(--color-accent);
 }
 
 /* Images */
@@ -362,11 +369,11 @@ select {
 
 /* Selection */
 ::selection {
-  background-color: var(--color-primary-light);
+  background-color: var(--color-primary-dark);
   color: var(--color-white);
 }
 
 ::-moz-selection {
-  background-color: var(--color-primary-light);
+  background-color: var(--color-primary-dark);
   color: var(--color-white);
 }
