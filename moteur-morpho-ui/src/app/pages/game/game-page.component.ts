@@ -73,17 +73,16 @@ export class GamePageComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (res: GameQuestion) => {
+        this.loading = false;
         if (res.ok && res.options) {
           this.question = res;
-          this.loading = false;
         } else {
-          this.error = 'Erreur lors du chargement de la question.';
-          this.loading = false;
+          this.error = 'فشل تحميل السؤال. الرجاء المحاولة مرة أخرى.';
         }
       },
       error: (err) => {
         console.error(err);
-        this.error = 'Erreur de connexion au serveur.';
+        this.error = 'فشل تحميل السؤال. تحقق من اتصالك بالخادم.';
         this.loading = false;
       }
     });

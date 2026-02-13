@@ -1,4 +1,4 @@
-<app-page-shell title="اللعبة" footerImageSrc="assets/illustrations/book.png">
+<app-page-shell [showFooterImage]="false">
   <div class="game-container">
 
     <!-- GAME OVER SCREEN -->
@@ -78,10 +78,10 @@
     </div>
 
     <!-- ERROR SCREEN -->
-    <div *ngIf="error" class="error-state">
-      <mat-icon color="warn">error</mat-icon>
+    <div class="error-state fade-in" *ngIf="error && !loading">
+      <mat-icon class="huge-icon">error_outline</mat-icon>
       <p>{{ error }}</p>
-      <button mat-stroked-button color="warn" (click)="loadQuestion()">إعادة المحاولة</button>
+      <button mat-raised-button color="primary" (click)="loadQuestion()">إعادة المحاولة</button>
     </div>
 
   </div>

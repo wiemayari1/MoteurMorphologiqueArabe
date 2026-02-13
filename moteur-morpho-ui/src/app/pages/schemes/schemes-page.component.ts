@@ -29,14 +29,14 @@ export class SchemesPageComponent {
   // Formulaire
   name = '';
   templ = '';
-  
+
   // Mode édition
   editingName: string | null = null;
   isEditing = false;
-  
+
   // Données
   schemes: SchemeItem[] = [];
-  
+
   // États
   loading = false;
   error = '';
@@ -51,7 +51,7 @@ export class SchemesPageComponent {
     this.loading = true;
     this.error = '';
     this.success = '';
-    
+
     this.api.listSchemes().subscribe({
       next: (r) => {
         this.schemes = r.schemes ?? [];
@@ -68,10 +68,10 @@ export class SchemesPageComponent {
   addNew() {
     this.error = '';
     this.success = '';
-    
+
     const cleanName = this.name.trim();
     const cleanTempl = this.templ.trim();
-    
+
     if (!cleanName || !cleanTempl) {
       this.error = 'الرجاء إدخال الاسم والقالب';
       return;
@@ -101,12 +101,12 @@ export class SchemesPageComponent {
   // ✅ METTRE À JOUR un schéma existant
   update() {
     if (!this.editingName) return;
-    
+
     this.error = '';
     this.success = '';
-    
+
     const cleanTempl = this.templ.trim();
-    
+
     if (!cleanTempl) {
       this.error = 'الرجاء إدخال القالب';
       return;
@@ -149,10 +149,10 @@ export class SchemesPageComponent {
   // ✅ SUPPRIMER un schéma
   deleteScheme(s: SchemeItem) {
     if (!confirm(`هل تريد حذف الوزن "${s.name}"؟`)) return;
-    
+
     this.loading = true;
     this.error = '';
-    
+
     this.api.deleteScheme(s.name).subscribe({
       next: () => {
         // Si on supprime celui en cours d'édition, annuler l'édition

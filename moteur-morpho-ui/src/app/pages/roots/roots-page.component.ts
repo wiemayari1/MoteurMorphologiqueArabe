@@ -56,6 +56,7 @@ export class RootsPageComponent {
     this.error = null;
     this.info = null;
     this.success = null;
+    this.query = ''; // Reset query to show full count correctly
 
     this.api.listRoots().subscribe({
       next: (r) => {
@@ -134,6 +135,7 @@ export class RootsPageComponent {
   }
 
   onSearchChange() {
+    this.error = null; // Clear error on search/input change per feedback
     this.searchSubject.next(this.query);
   }
 

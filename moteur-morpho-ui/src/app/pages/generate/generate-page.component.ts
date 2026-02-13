@@ -228,8 +228,9 @@ export class GeneratePageComponent implements OnInit {
   }
 
   get canGenerate(): boolean {
-    return !!((this.selectedRoot || this.customRoot).trim()) &&
-      !!((this.selectedScheme?.template || this.customScheme).trim());
+    const hasRoot = (this.selectedRoot || this.customRoot)?.trim().length > 0;
+    const hasScheme = (this.selectedScheme?.template || this.customScheme)?.trim().length > 0;
+    return hasRoot && hasScheme && !this.loading;
   }
 
   generate() {
@@ -250,10 +251,12 @@ export class GeneratePageComponent implements OnInit {
         this.loading = false;
         if (response.ok && response.word) {
           this.generatedWords = [response.word];
-          this.snackBar.open('تمت عملية التوليد بنجاح!', 'إغلاق', { duration: 3000 });
+          // Result is now displayed in page per feedback
         } else {
           this.error = response.error || 'فشل التوليد';
-          this.snackBar.open(this.error || 'فشل التوليد', 'إغلاق', { duration: 4000 });
+          if (this.error === 'scheme_not_found') {
+            this.error = 'الوزن المختار غير مدعوم حالياً في المحرّك.';
+          }
         }
       },
       error: (err) => {

@@ -23,4 +23,17 @@ export class PageShellComponent {
   goHome() {
     this.router.navigate(['/']);
   }
+
+  getPageTitle(): string {
+    if (this.title) return this.title;
+
+    const url = this.router.url;
+    if (url.includes('roots')) return 'إدارة الجذور';
+    if (url.includes('schemes')) return 'إدارة الأوزان';
+    if (url.includes('validate')) return 'التحقق من الكلمات';
+    if (url.includes('generate')) return 'توليد الكلمات';
+    if (url.includes('game')) return 'اللعبة';
+
+    return 'المحرّك الصرفي';
+  }
 }

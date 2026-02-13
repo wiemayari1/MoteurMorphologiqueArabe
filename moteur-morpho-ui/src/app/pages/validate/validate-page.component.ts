@@ -27,7 +27,12 @@ export class ValidatePageComponent {
   word = '';
   root = '';
   res: ValidateResponse | null = null;
+  errorMessage: string | null = null;
   loading = false;
+
+  get canSubmit(): boolean {
+    return this.word.trim().length > 0 && this.root.trim().length > 0 && !this.loading;
+  }
 
   constructor(private api: ApiService, private snackBar: MatSnackBar) { }
 
@@ -37,16 +42,19 @@ export class ValidatePageComponent {
     this.api.validate({ word: this.word, root: this.root }).subscribe({
       next: (r) => {
         this.res = r;
-        if (r.ok) {
-          const msg = r.belongs ? 'الكلمة تنتمي إلى الجذر!' : 'الكلمة لا تنتمي إلى هذا الجذر.';
-          this.snackBar.open(msg, 'إغلاق', { duration: 3000 });
-        }
+        this.errorMessage = null;
       },
       error: (e) => {
-        this.res = { ok: false, error: e?.message ?? 'network_error' };
-        this.snackBar.open('خطأ في الاتصال بالخادم', 'إغلاق', { duration: 4000 });
+        this.res = null;
+        this.errorMessage = e?.message ?? 'خطأ في الاتصال بالخادم';
+        this.snackBar.open(this.errorMessage!, 'إغلاق', { duration: 4000 });
       },
       complete: () => (this.loading = false),
     });
+  }
+
+  onInputChange() {
+    this.errorMessage = null;
+    this.res = null;
   }
 }

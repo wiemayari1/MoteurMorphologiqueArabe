@@ -1,63 +1,62 @@
-<app-page-shell cardTitle="الجذور" footerImageSrc="assets/illustrations/book.png">
-  <mat-card class="box">
-    <h2>الجذور</h2>
+<app-page-shell [showFooterImage]="true">
+  <mat-card class="root-card">
+    <div class="card-body">
+      <!-- Messages -->
+      <div class="success" *ngIf="success">{{ success }}</div>
+      <div class="err" *ngIf="error">⚠️ {{ error }}</div>
+      <div class="info" *ngIf="info">{{ info }}</div>
 
-    <!-- Messages -->
-    <div class="success" *ngIf="success">{{ success }}</div>
-    <div class="err" *ngIf="error">⚠️ {{ error }}</div>
-    <div class="info" *ngIf="info">{{ info }}</div>
+      <!-- Formulaire d'ajout -->
+      <div class="row add-section">
+        <mat-form-field appearance="outline">
+          <mat-label>إضافة جذر (٣ أحرف)</mat-label>
+          <input matInput [(ngModel)]="newRoot" placeholder="كتب" maxlength="3" (keyup.enter)="add()" />
+        </mat-form-field>
 
-    <!-- Formulaire d'ajout -->
-    <div class="row add-section">
-      <mat-form-field appearance="outline">
-        <mat-label>إضافة جذر (٣ أحرف)</mat-label>
-        <input matInput [(ngModel)]="newRoot" placeholder="كتب" maxlength="3" (keyup.enter)="add()" />
-      </mat-form-field>
+        <button mat-raised-button color="primary" (click)="add()" [disabled]="loading || !newRoot.trim()">
+          <mat-icon>add</mat-icon>
+          إضافة
+        </button>
 
-      <button mat-raised-button color="primary" (click)="add()" [disabled]="loading || !newRoot.trim()">
-        <mat-icon>add</mat-icon>
-        إضافة
-      </button>
-
-      <button mat-stroked-button (click)="refresh()" [disabled]="loading">
-        <mat-icon>refresh</mat-icon>
-        تحديث
-      </button>
-    </div>
-
-    <!-- Barre de recherche -->
-    <div class="row search-section">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>بحث</mat-label>
-        <input matInput [(ngModel)]="query" (ngModelChange)="onSearchChange()" placeholder="اكتب حرفاً..." />
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-
-      <div class="count" *ngIf="filtered.length > 0">
-        {{ filtered.length }} جذر
+        <button mat-stroked-button (click)="refresh()" [disabled]="loading">
+          <mat-icon>refresh</mat-icon>
+          تحديث
+        </button>
       </div>
-    </div>
 
-    <!-- Liste des racines -->
-    <div class="list-container" *ngIf="filtered.length > 0">
-      <div class="list">
-        <div class="item" *ngFor="let r of filtered; let i = index">
-          <div class="number">{{ i + 1 }}</div>
-          <div class="root-text">{{ r.root }}</div>
-          <div class="meaning" *ngIf="r.meaning">{{ r.meaning }}</div>
+      <!-- Barre de recherche -->
+      <div class="row search-section">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>بحث</mat-label>
+          <input matInput [(ngModel)]="query" (ngModelChange)="onSearchChange()" placeholder="اكتب حرفاً..." />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
 
-          <!-- ✅ Bouton supprimer -->
-          <button mat-icon-button color="warn" (click)="delete(r.root)" [disabled]="loading" class="delete-btn">
-            <mat-icon>delete</mat-icon>
-          </button>
+        <div class="count" *ngIf="filtered.length > 0">
+          {{ filtered.length }} جذر
         </div>
       </div>
-    </div>
 
-    <!-- État vide -->
-    <div class="empty" *ngIf="filtered.length === 0 && !loading">
-      <mat-icon>search_off</mat-icon>
-      <p>لا توجد نتائج</p>
-    </div>
+      <!-- Liste des racines -->
+      <div class="list-container" *ngIf="filtered.length > 0">
+        <div class="list">
+          <div class="item" *ngFor="let r of filtered; let i = index">
+            <div class="number">{{ i + 1 }}</div>
+            <div class="root-text">{{ r.root }}</div>
+            <div class="meaning" *ngIf="r.meaning">{{ r.meaning }}</div>
+
+            <!-- ✅ Bouton supprimer -->
+            <button mat-icon-button color="warn" (click)="delete(r.root)" [disabled]="loading" class="delete-btn">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- État vide -->
+      <div class="empty" *ngIf="filtered.length === 0 && !loading">
+        <mat-icon>search_off</mat-icon>
+        <p>لا توجد نتائج</p>
+      </div>
   </mat-card>
 </app-page-shell>

@@ -5,23 +5,27 @@
 
 /* Container */
 .dash-container {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  min-height: 500px;
+}
+
+.dash-meta {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: var(--spacing-xl);
 }
 
 .dash-title {
-  display: flex;
-  margin-bottom: var(--spacing-lg);
-
-  span {
-    background: var(--color-gray-100);
-    color: var(--color-text-secondary);
-    padding: var(--spacing-xs) var(--spacing-md);
-    border-radius: var(--radius-md);
-    font-weight: var(--font-weight-black);
-    font-size: var(--font-size-sm);
-  }
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-black);
+  font-size: var(--font-size-base);
+  opacity: 0.6;
 }
 
 .dash-card__top {
@@ -37,11 +41,44 @@
   }
 }
 
-/* Tiles Grid - 4 Columns */
+/* Tiles Grid - 5 Cards (3+2) */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-lg);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+  max-width: 900px;
+  margin: 0 auto;
+
+  &> :nth-child(n+4) {
+    grid-column: span 1;
+  }
+
+  /* Centering the last 2 items */
+  &> :nth-child(4) {
+    grid-column: 1 / 2;
+    margin-left: -50%;
+  }
+
+  &> :nth-child(5) {
+    grid-column: 2 / 3;
+    margin-left: -50%;
+  }
+}
+
+@media (min-width: 901px) {
+  .tiles {
+    grid-template-columns: repeat(3, 1fr);
+
+    &> :nth-child(4) {
+      grid-column: 1 / 2;
+      margin-left: 50%;
+    }
+
+    &> :nth-child(5) {
+      grid-column: 2 / 3;
+      margin-left: 50%;
+    }
+  }
 }
 
 @media (max-width: 1100px) {
@@ -76,7 +113,8 @@
   border-radius: 20px;
   background: var(--color-white);
   border: none;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  /* Subtle shadow per feedback */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,16 +122,45 @@
   gap: var(--spacing-md);
   transition: all var(--transition-base);
   cursor: pointer;
+  animation: fadeIn 0.5s ease-out forwards;
+  opacity: 0;
 
   &:hover {
     transform: translateY(-8px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   }
+}
 
-  &--settings {
-    grid-column: 4;
-    /* Offset to the right */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tile:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.tile:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.tile:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.tile:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.tile:nth-child(5) {
+  animation-delay: 0.5s;
 }
 
 .tile__label {
@@ -107,10 +174,11 @@
 /* Glossy App Icon */
 /* Updated App Icon Styles */
 .app-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  background: var(--color-gray-50);
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--color-gray-100);
+  /* Light gray background per feedback */
   display: grid;
   place-items: center;
   transition: all var(--transition-base);

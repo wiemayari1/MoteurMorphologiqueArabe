@@ -1,7 +1,5 @@
-<app-page-shell cardTitle="التوليد" footerImageSrc="assets/illustrations/book.png">
+<app-page-shell [showFooterImage]="true">
   <mat-card class="generate-card">
-    <h2 class="page-title">توليد الكلمات</h2>
-    <p class="subtitle">اختر جذراً ووزناً لتوليد كلمة عربية</p>
 
     <!-- Chargement des données -->
     <div class="loading-data" *ngIf="loadingData">
@@ -18,7 +16,7 @@
 
     <!-- Formulaire -->
     <div class="form-section" *ngIf="!loadingData">
-      
+
       <!-- Sélection du Jadhr -->
       <div class="input-group">
         <mat-form-field appearance="outline" class="full-width">
@@ -53,79 +51,49 @@
       <div class="manual-input">
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>أو أدخل الجذر يدوياً</mat-label>
-          <input matInput [(ngModel)]="selectedRoot" maxlength="3" placeholder="كتب" />
+          <input matInput [(ngModel)]="customRoot" maxlength="3" placeholder="كتب" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>أو أدخل الوزن يدوياً</mat-label>
-          <input matInput [(ngModel)]="selectedScheme" placeholder="فَاعَلَ" />
+          <input matInput [(ngModel)]="customScheme" placeholder="فَاعَلَ" />
         </mat-form-field>
       </div>
 
       <!-- Boutons d'action -->
       <div class="actions">
-        <button mat-raised-button 
-                color="primary" 
-                (click)="submit()" 
-                [disabled]="loading || !selectedRoot || !selectedScheme"
-                class="generate-btn">
+        <button mat-raised-button color="primary" (click)="generate()" [disabled]="!canGenerate" class="generate-btn">
           <mat-icon *ngIf="!loading">auto_fix_high</mat-icon>
           <mat-icon *ngIf="loading" class="spin">refresh</mat-icon>
           {{ loading ? 'جاري التوليد...' : 'توليد' }}
         </button>
 
-        <button mat-stroked-button 
-                (click)="reset()" 
-                [disabled]="loading">
-          <mat-icon>clear</mat-icon>
-          إعادة تعيين
-        </button>
       </div>
     </div>
 
-    <!-- Résultat -->
-    <div class="result-section" *ngIf="res">
-      
+    <!-- Résultats dans la page -->
+    <div class="result-section" *ngIf="generatedWords.length > 0 || error">
+
       <!-- Succès -->
-      <div class="success-result" *ngIf="res.ok; else errorResult">
+      <div class="success-result" *ngIf="generatedWords.length > 0; else errorResult">
         <div class="result-header">
           <mat-icon class="success-icon">check_circle</mat-icon>
           <span>تم التوليد بنجاح!</span>
         </div>
 
-        <div class="generation-formula">
-          <div class="formula-item">
-            <span class="label">الجذر:</span>
-            <span class="value root">{{ selectedRoot }}</span>
+        <div class="words-list">
+          <div class="word-item" *ngFor="let word of generatedWords">
+            <span class="value result-word">{{ word }}</span>
           </div>
-          
-          <span class="operator">+</span>
-          
-          <div class="formula-item">
-            <span class="label">الوزن:</span>
-            <span class="value scheme">{{ getSelectedSchemeName() }}</span>
-          </div>
-          
-          <span class="operator">=</span>
-          
-          <div class="formula-item result-item">
-            <span class="label">النتيجة:</span>
-            <span class="value result-word">{{ res.word }}</span>
-          </div>
-        </div>
-
-        <div class="result-details" *ngIf="res.root || res.scheme">
-          <p><strong>الجذر المستخدم:</strong> {{ res.root }}</p>
-          <p><strong>الوزن المستخدم:</strong> {{ res.scheme }}</p>
         </div>
       </div>
 
       <!-- Erreur -->
       <ng-template #errorResult>
-        <div class="error-result">
+        <div class="error-result" *ngIf="error">
           <mat-icon class="error-icon">error</mat-icon>
           <h3>حدث خطأ</h3>
-          <p>{{ res.error }}</p>
+          <p>{{ error }}</p>
         </div>
       </ng-template>
     </div>

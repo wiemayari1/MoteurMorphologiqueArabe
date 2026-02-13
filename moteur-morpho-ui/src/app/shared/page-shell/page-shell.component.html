@@ -1,9 +1,9 @@
 <header class="dash-header">
   <div class="dash-header__content">
-    <div class="dash-header__title">{{ title }}</div>
+    <div class="dash-header__title">{{ getPageTitle() }}</div>
   </div>
   <!-- Floating Home Button -->
-  <button mat-fab class="floating-home-btn" (click)="goHome()" *ngIf="router.url !== '/'">
+  <button mat-fab class="floating-home-btn" (click)="goHome()" *ngIf="router.url !== '/'" title="الرئيسية">
     <mat-icon>home</mat-icon>
   </button>
 </header>
@@ -19,17 +19,18 @@
     </div>
 
     <!-- Footer with Letter Animation Container -->
-    <div class="footer-art" *ngIf="showFooterImage">
-      <div class="animated-letters">
-        <span class="letter">أ</span>
-        <span class="letter">ب</span>
-        <span class="letter">ج</span>
-        <span class="letter">د</span>
-        <span class="letter">ه</span>
-        <span class="letter">و</span>
-        <span class="letter">ز</span>
+    <div class="footer-art-wrapper" *ngIf="showFooterImage">
+      <div class="footer-art">
+        <div class="animated-letters">
+          <span class="letter">أ</span>
+          <span class="letter">ب</span>
+          <span class="letter">ج</span>
+          <span class="letter">د</span>
+          <span class="letter">ه</span>
+          <span class="letter">و</span>
+        </div>
+        <img class="book-img" [src]="footerImageSrc" [alt]="footerImageAlt" />
       </div>
-      <img class="book-img" [src]="footerImageSrc" [alt]="footerImageAlt" />
     </div>
   </section>
 </main>

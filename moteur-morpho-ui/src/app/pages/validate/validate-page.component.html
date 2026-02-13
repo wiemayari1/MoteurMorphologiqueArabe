@@ -1,42 +1,15 @@
-<app-page-shell cardTitle="التحقّق" footerImageSrc="assets/illustrations/book.png">
-  <mat-card class="box">
-    <h2>التحقّق</h2>
+<div class="bad" *ngIf="res.belongs === false">
+  النتيجة: <b>لا</b>
+</div>
 
-    <div class="row">
-      <mat-form-field appearance="outline">
-        <mat-label>الكلمة</mat-label>
-        <input matInput [(ngModel)]="word" placeholder="مكتوب" />
-      </mat-form-field>
+<div class="bad" *ngIf="res.belongs == null">
+  لم يتم إرجاع قيمة belongs من الخادم.
+</div>
+</div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>الجذر</mat-label>
-        <input matInput [(ngModel)]="root" placeholder="كتب" />
-      </mat-form-field>
-    </div>
-
-    <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading || !word.trim() || !root.trim()">
-      تحقّق
-    </button>
-
-    <div class="result" *ngIf="res">
-      <div *ngIf="res.ok; else err">
-        <div class="ok" *ngIf="res.belongs">
-          النتيجة: <b>نعم</b>
-          <span *ngIf="res.schemes?.length"> — الأوزان: <b>{{ res.schemes.join('، ') }}</b></span>
-        </div>
-
-        <div class="bad" *ngIf="res.belongs === false">
-          النتيجة: <b>لا</b>
-        </div>
-
-        <div class="bad" *ngIf="res.belongs == null">
-          لم يتم إرجاع قيمة belongs من الخادم.
-        </div>
-      </div>
-
-      <ng-template #err>
-        <div class="bad">خطأ: {{ res.error }}</div>
-      </ng-template>
-    </div>
-  </mat-card>
+<ng-template #err>
+  <div class="bad">خطأ: {{ res.error }}</div>
+</ng-template>
+</div>
+</mat-card>
 </app-page-shell>
