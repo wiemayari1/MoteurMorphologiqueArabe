@@ -11,22 +11,15 @@
     <div class="row add-section">
       <mat-form-field appearance="outline">
         <mat-label>إضافة جذر (٣ أحرف)</mat-label>
-        <input matInput [(ngModel)]="newRoot" 
-               placeholder="كتب" 
-               maxlength="3"
-               (keyup.enter)="add()" />
+        <input matInput [(ngModel)]="newRoot" placeholder="كتب" maxlength="3" (keyup.enter)="add()" />
       </mat-form-field>
 
-      <button mat-raised-button color="primary" 
-              (click)="add()" 
-              [disabled]="loading || !newRoot.trim()">
+      <button mat-raised-button color="primary" (click)="add()" [disabled]="loading || !newRoot.trim()">
         <mat-icon>add</mat-icon>
         إضافة
       </button>
 
-      <button mat-stroked-button 
-              (click)="refresh()" 
-              [disabled]="loading">
+      <button mat-stroked-button (click)="refresh()" [disabled]="loading">
         <mat-icon>refresh</mat-icon>
         تحديث
       </button>
@@ -36,12 +29,10 @@
     <div class="row search-section">
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>بحث</mat-label>
-        <input matInput [(ngModel)]="query" 
-               (ngModelChange)="applyFilter()" 
-               placeholder="اكتب حرفاً..." />
+        <input matInput [(ngModel)]="query" (ngModelChange)="onSearchChange()" placeholder="اكتب حرفاً..." />
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
-      
+
       <div class="count" *ngIf="filtered.length > 0">
         {{ filtered.length }} جذر
       </div>
@@ -54,13 +45,9 @@
           <div class="number">{{ i + 1 }}</div>
           <div class="root-text">{{ r.root }}</div>
           <div class="meaning" *ngIf="r.meaning">{{ r.meaning }}</div>
-          
+
           <!-- ✅ Bouton supprimer -->
-          <button mat-icon-button 
-                  color="warn" 
-                  (click)="delete(r.root)"
-                  [disabled]="loading"
-                  class="delete-btn">
+          <button mat-icon-button color="warn" (click)="delete(r.root)" [disabled]="loading" class="delete-btn">
             <mat-icon>delete</mat-icon>
           </button>
         </div>

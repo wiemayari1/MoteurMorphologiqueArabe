@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, throwError, timeout, catchError } from 'rxjs';
 
 // Interfaces
 export interface GenerateResponse {
@@ -153,7 +152,10 @@ export class ApiService {
     return this.http.post<GenerateResponse>(`${this.apiUrl}/generate`, {
       root: data.root.trim(),
       scheme: data.scheme.trim()
-    }).pipe(catchError(this.handleError));
+    }).pipe(
+      timeout(30000), // 30s timeout for engine
+      catchError(this.handleError)
+    );
   }
 
   // ========== VALIDATION (التحقق) ==========

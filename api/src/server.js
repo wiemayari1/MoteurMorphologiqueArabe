@@ -71,7 +71,15 @@ function execEngine(args) {
         const cmd = `"${ENGINE_PATH}" --data "${DATA_PATH}" --schemes "${SCHEMES_PATH}" --json ${args}`;
         console.log('Executing:', cmd);
 
-        exec(cmd, { encoding: 'utf8', windowsHide: true }, (err, stdout, stderr) => {
+        exec(cmd, {
+            encoding: 'utf8',
+            windowsHide: true,
+            timeout: 25000 // 25s timeout to prevent infinite blocking
+        }, (err, stdout, stderr) => {
+            if (err && err.killed) {
+                console.error('Engine Timeout (killed)');
+                return reject(new Error('Engine process took too long (>25s) and was terminated.'));
+            }
             if (stderr) {
                 console.warn('Engine stderr:', stderr);
             }

@@ -13,5 +13,6 @@ export const routes: Routes = [
   { path: 'generate', component: GeneratePageComponent },
   { path: 'validate', component: ValidatePageComponent },
   { path: 'game', component: GamePageComponent },
+  { path: 'settings', loadComponent: () => import('./pages/settings/settings-page.component').then(m => m.SettingsPageComponent) },
   { path: '**', redirectTo: '' }
 ];

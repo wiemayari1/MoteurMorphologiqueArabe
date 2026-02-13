@@ -14,7 +14,7 @@
       </mat-form-field>
     </div>
 
-    <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading">
+    <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading || !word.trim() || !root.trim()">
       تحقّق
     </button>
 

@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { PageShellComponent } from '../../shared/page-shell/page-shell.component';
 import { ApiService, RootsResponse, SchemesResponse, RootItem, SchemeItem } from '../../services/api.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-generate-page',
@@ -23,6 +24,7 @@ import { ApiService, RootsResponse, SchemesResponse, RootItem, SchemeItem } from
     MatSelectModule,
     MatProgressSpinnerModule,
     MatIconModule,
+    MatSnackBarModule,
     PageShellComponent
   ],
   template: `
@@ -46,7 +48,7 @@ import { ApiService, RootsResponse, SchemesResponse, RootItem, SchemeItem } from
                 <mat-label>اختر الوزن</mat-label>
                 <mat-select [(ngModel)]="selectedScheme">
                   <mat-option *ngFor="let scheme of schemes" [value]="scheme">
-                    {{ scheme.name }} ({{ scheme.pattern }})
+                    {{ scheme.name }} ({{ scheme.template }})
                   </mat-option>
                 </mat-select>
               </mat-form-field>
@@ -127,15 +129,15 @@ import { ApiService, RootsResponse, SchemesResponse, RootItem, SchemeItem } from
 export class GeneratePageComponent implements OnInit {
   roots: string[] = ['كتب', 'درس', 'علم', 'فتح', 'عمل'];
 
-  schemes: { id?: number; name: string; pattern: string }[] = [
-    { name: 'فاعل', pattern: 'فاعل' },
-    { name: 'مفعول', pattern: 'مفعول' },
-    { name: 'كتاب', pattern: 'فِعال' },
-    { name: 'مفعّلة', pattern: 'مفعّلة' }
+  schemes: { id?: number; name: string; template: string }[] = [
+    { name: 'فاعل', template: 'فاعل' },
+    { name: 'مفعول', template: 'مفعول' },
+    { name: 'كتاب', template: 'فِعال' },
+    { name: 'مفعّلة', template: 'مفعّلة' }
   ];
 
   selectedRoot: string = '';
-  selectedScheme: { id?: number; name: string; pattern: string } | null = null;
+  selectedScheme: { id?: number; name: string; template: string } | null = null;
   customRoot: string = '';
   customScheme: string = '';
   generatedWords: string[] = [];
@@ -148,7 +150,7 @@ export class GeneratePageComponent implements OnInit {
     { root: 'درس', scheme: 'مفعّلة', result: 'مدرسة' }
   ];
 
-  constructor(private apiService: ApiService) { }
+  constructor(private apiService: ApiService, private snackBar: MatSnackBar) { }
 
   ngOnInit() {
     this.loadData();
@@ -213,19 +215,8 @@ export class GeneratePageComponent implements OnInit {
 
             return {
               id: obj.id ?? undefined,
-              name:
-                obj.name ??
-                obj.description ??
-                obj.pattern ??
-                obj.form ??
-                obj.text ??
-                'وزن غير معروف',
-              pattern:
-                obj.pattern ??
-                obj.form ??
-                obj.name ??
-                obj.text ??
-                '؟؟؟'
+              name: obj.name ?? 'وزن غير معروف',
+              template: obj.template ?? obj.pattern ?? '؟؟؟'
             };
           });
         }
@@ -238,12 +229,12 @@ export class GeneratePageComponent implements OnInit {
 
   get canGenerate(): boolean {
     return !!((this.selectedRoot || this.customRoot).trim()) &&
-      !!((this.selectedScheme?.pattern || this.customScheme).trim());
+      !!((this.selectedScheme?.template || this.customScheme).trim());
   }
 
   generate() {
     const root = (this.selectedRoot || this.customRoot).trim();
-    const schemePattern = this.selectedScheme?.pattern || this.customScheme.trim();
+    const schemePattern = this.selectedScheme?.template || this.customScheme.trim();
 
     if (!root || !schemePattern) {
       this.error = 'الرجاء اختيار الجذر والوزن أو إدخالهما يدوياً';
@@ -259,13 +250,16 @@ export class GeneratePageComponent implements OnInit {
         this.loading = false;
         if (response.ok && response.word) {
           this.generatedWords = [response.word];
+          this.snackBar.open('تمت عملية التوليد بنجاح!', 'إغلاق', { duration: 3000 });
         } else {
           this.error = response.error || 'فشل التوليد';
+          this.snackBar.open(this.error || 'فشل التوليد', 'إغلاق', { duration: 4000 });
         }
       },
       error: (err) => {
         this.loading = false;
         this.error = err.message || 'خطأ في الاتصال بالخادم';
+        this.snackBar.open(this.error, 'إغلاق', { duration: 5000 });
         console.error('Generation error:', err);
       }
     });
@@ -282,7 +276,7 @@ export class GeneratePageComponent implements OnInit {
 
   loadExample(ex: { root: string; scheme: string; result: string }) {
     this.selectedRoot = ex.root;
-    this.selectedScheme = this.schemes.find(s => s.pattern === ex.scheme) || null;
+    this.selectedScheme = this.schemes.find(s => s.template === ex.scheme) || null;
     this.customRoot = ex.root;
     this.customScheme = ex.scheme;
     this.generate();

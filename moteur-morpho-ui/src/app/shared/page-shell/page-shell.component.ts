@@ -39,7 +39,7 @@ import { MatButtonModule } from '@angular/material/button';
 export class PageShellComponent {
   @Input() title: string = '';
 
-  constructor(private router: Router) { }
+  constructor(public router: Router) { }
 
   goHome() {
     this.router.navigate(['/']);

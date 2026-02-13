@@ -1,22 +1,24 @@
 /* Generate Page Component - Using Design System */
 .generate-card {
-  padding: var(--spacing-lg);
-  max-width: 800px;
+  padding: var(--spacing-xl);
+  max-width: 900px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .page-title {
-  color: var(--color-teal);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-primary-dark);
+  margin-bottom: var(--spacing-xs);
   text-align: right;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-black);
 }
 
 .subtitle {
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   text-align: right;
+  font-weight: var(--font-weight-medium);
 }
 
 /* Chargement */

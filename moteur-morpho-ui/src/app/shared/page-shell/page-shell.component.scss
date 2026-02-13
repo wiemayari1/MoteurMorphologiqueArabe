@@ -5,13 +5,13 @@
 
 /* Header Styles */
 .dash-header {
-  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-light) 100%);
+  background: var(--color-primary-dark);
   color: var(--color-white);
-  padding: 0;
+  padding: var(--spacing-md) 0;
   box-shadow: var(--shadow-lg);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -26,31 +26,51 @@
 
 .dash-header__title {
   font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-black);
   margin: 0;
   text-align: center;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  letter-spacing: 0.5px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  letter-spacing: 1px;
+}
+
+.floating-home-btn {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-lg);
+  background: var(--color-white) !important;
+  color: var(--color-primary-dark) !important;
+  box-shadow: var(--shadow-lg) !important;
+  transition: all var(--transition-base) !important;
+
+  &:hover {
+    transform: scale(1.1);
+    background: var(--color-gray-50) !important;
+    color: var(--color-primary-light) !important;
+  }
 }
 
 /* Main Content Area */
 .dash {
+  width: 100%;
   max-width: 1200px;
   margin: var(--spacing-xl) auto;
   padding: 0 var(--spacing-lg);
   min-height: calc(100vh - 200px);
-  /* Ensure content area has minimum height */
+  display: flex;
+  justify-content: center;
 }
 
 /* Card Container */
 .dash-card {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  width: 100%;
+  max-width: 900px;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
   border-radius: var(--radius-xl);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-xl);
   backdrop-filter: blur(12px);
-  overflow: visible;
+  overflow: hidden;
   margin-bottom: var(--spacing-lg);
 }
 
@@ -81,6 +101,46 @@
   border-top: 1px solid var(--color-gray-200);
 }
 
+/* Integrated Letter Animation */
+.animated-letters {
+  position: absolute;
+  bottom: 60px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  pointer-events: none;
+  z-index: 1;
+
+  .letter {
+    font-size: 32px;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary-light);
+    opacity: 0.6;
+    animation: floatLetters 4s ease-in-out infinite alternate;
+
+    &:nth-child(2n) {
+      animation-delay: 1s;
+      color: var(--color-secondary);
+    }
+
+    &:nth-child(3n) {
+      animation-delay: 2s;
+      color: var(--color-warning);
+    }
+  }
+}
+
+@keyframes floatLetters {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(-20px) rotate(10deg);
+  }
+}
+
 .book-img {
   width: min(680px, 100%);
   max-width: 680px;
@@ -91,9 +151,10 @@
   filter: drop-shadow(0 12px 24px rgba(2, 81, 89, 0.15));
   opacity: 0.95;
   transition: transform var(--transition-base), opacity var(--transition-base);
+  z-index: 2;
 
   &:hover {
-    transform: translateY(-4px);
+    transform: translateY(-8px);
     opacity: 1;
   }
 }

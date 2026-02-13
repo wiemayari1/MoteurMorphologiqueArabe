@@ -2,11 +2,14 @@
   <div class="dash-header__content">
     <div class="dash-header__title">{{ title }}</div>
   </div>
+  <!-- Floating Home Button -->
+  <button mat-fab class="floating-home-btn" (click)="goHome()" *ngIf="router.url !== '/'">
+    <mat-icon>home</mat-icon>
+  </button>
 </header>
 
 <main class="dash">
   <section class="dash-card">
-    <!-- ✅ إذا ما تحبّش العنوان الصغير (المحاط بالأحمر في بعض الصور)، خليه اختياري -->
     <div class="dash-card__top" *ngIf="cardTitle && cardTitle.trim().length">
       <h2>{{ cardTitle }}</h2>
     </div>
@@ -15,7 +18,17 @@
       <ng-content></ng-content>
     </div>
 
+    <!-- Footer with Letter Animation Container -->
     <div class="footer-art" *ngIf="showFooterImage">
+      <div class="animated-letters">
+        <span class="letter">أ</span>
+        <span class="letter">ب</span>
+        <span class="letter">ج</span>
+        <span class="letter">د</span>
+        <span class="letter">ه</span>
+        <span class="letter">و</span>
+        <span class="letter">ز</span>
+      </div>
       <img class="book-img" [src]="footerImageSrc" [alt]="footerImageAlt" />
     </div>
   </section>
