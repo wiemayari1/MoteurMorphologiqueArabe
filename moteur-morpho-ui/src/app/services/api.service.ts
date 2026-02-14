@@ -54,6 +54,18 @@ export interface ApiResponse {
   error?: string;
 }
 
+export interface DerivativeItem {
+  word: string;
+  scheme: string;
+  timestamp: number;
+}
+
+export interface DerivativesResponse {
+  ok: boolean;
+  derivatives: DerivativeItem[];
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -73,6 +85,13 @@ export class ApiService {
     }
     console.error('API Error:', error);
     return throwError(() => new Error(errorMsg));
+  }
+
+  // ========== DERIVATIVES (Dérivés validés) ==========
+  getDerivatives(root: string): Observable<DerivativesResponse> {
+    return this.http.get<DerivativesResponse>(
+      `${this.apiUrl}/derivatives/${encodeURIComponent(root.trim())}`
+    ).pipe(catchError(this.handleError));
   }
 
   // ========== RACINES (الجذور) ==========

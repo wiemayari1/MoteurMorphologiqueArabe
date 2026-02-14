@@ -1,4 +1,4 @@
-<app-page-shell cardTitle="الأوزان" [showFooterImage]="true">
+<app-page-shell [showFooterImage]="true">
   <mat-card class="scheme-card">
     <div class="card-body">
 
@@ -40,10 +40,9 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="template-field">
-            <mat-label>القالب (النمط)</mat-label>
+            <mat-label>القالب</mat-label>
             <input matInput [(ngModel)]="templ" placeholder="مثال: 1َ2َ3َ أو فَعَلَ" />
             <mat-icon matSuffix>code</mat-icon>
-            <mat-hint>استخدم الأرقام 1,2,3 للحروف أو اكتب الوزن كاملاً</mat-hint>
           </mat-form-field>
         </div>
 
@@ -63,8 +62,6 @@
 
       <!-- Tableau des schémas -->
       <div class="table-section" *ngIf="schemes.length > 0">
-        <h3>قائمة الأوزان ({{ schemes.length }})</h3>
-
         <div class="table-container">
           <table>
             <thead>

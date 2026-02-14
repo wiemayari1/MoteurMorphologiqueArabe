@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, ValidateResponse } from '../../services/api.service';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -38,15 +39,25 @@ export class ValidatePageComponent {
     return this.word.trim().length > 0 && this.root.trim().length > 0 && !this.loading;
   }
 
-  constructor(private api: ApiService, private snackBar: MatSnackBar) { }
+  private searchSubject = new Subject<void>();
+
+  constructor(private api: ApiService, private snackBar: MatSnackBar) {
+    this.searchSubject.pipe(
+      debounceTime(500),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      if (this.canSubmit) {
+        this.submit();
+      }
+    });
+  }
 
   submit() {
     this.res = null;
     this.errorMessage = null;
 
     if (!/^[\u0600-\u06FF\s]+$/.test(this.word) || !/^[\u0600-\u06FF\s]+$/.test(this.root)) {
-      this.errorMessage = 'الرجاء إدخال أحرف عربية فقط';
-      this.snackBar.open(this.errorMessage, 'إغلاق', { duration: 3000 });
+      // Don't show error immediately on typing, just return
       return;
     }
 
@@ -60,15 +71,14 @@ export class ValidatePageComponent {
         error: (e) => {
           this.res = null;
           this.errorMessage = e?.message ?? 'خطأ في الاتصال بالخادم';
-          this.snackBar.open(this.errorMessage!, 'إغلاق', { duration: 4000 });
           this.loading = false;
         }
       });
   }
 
-
   onInputChange() {
     this.errorMessage = null;
     this.res = null;
+    this.searchSubject.next();
   }
 }

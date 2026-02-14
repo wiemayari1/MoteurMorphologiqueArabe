@@ -38,11 +38,13 @@ if (!fs.existsSync(ENGINE_PATH)) {
 
 const DATA_PATH = path.join(DATA_DIR, 'roots.txt');
 const SCHEMES_PATH = path.join(DATA_DIR, 'schemes.txt');
+const DERIVATIVES_PATH = path.join(DATA_DIR, 'derivatives.json');
 
 console.log('--- Configuration ---');
 console.log('Engine Path:', ENGINE_PATH);
 console.log('Data Path:', DATA_PATH);
 console.log('Schemes Path:', SCHEMES_PATH);
+console.log('Derivatives Path:', DERIVATIVES_PATH);
 console.log('---------------------');
 
 // Ensure files exist
@@ -50,8 +52,38 @@ function ensureFilesExist() {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, 'كتب\nدرس\nعلم\n', 'utf8');
     if (!fs.existsSync(SCHEMES_PATH)) fs.writeFileSync(SCHEMES_PATH, 'فَعَلَ|1َ2َ3َ\nفَاعَلَ|1َا2َ3َ\nمَفْعُول|مَ1ْ2ُو3\n', 'utf8');
+    if (!fs.existsSync(DERIVATIVES_PATH)) fs.writeFileSync(DERIVATIVES_PATH, '{}', 'utf8');
 }
 ensureFilesExist();
+
+// --- Helper for Derivatives ---
+function saveDerivative(root, word, schemeName) {
+    try {
+        if (!root || !word) return;
+        const cleanRoot = root.trim();
+        const cleanWord = word.trim();
+
+        let existing = {};
+        try {
+            existing = JSON.parse(fs.readFileSync(DERIVATIVES_PATH, 'utf8'));
+        } catch (e) { existing = {}; }
+
+        if (!existing[cleanRoot]) existing[cleanRoot] = [];
+
+        // Check if word already exists for this root
+        const exists = existing[cleanRoot].some(item => item.word === cleanWord);
+        if (!exists) {
+            existing[cleanRoot].push({
+                word: cleanWord,
+                scheme: schemeName || 'Unknown',
+                timestamp: Date.now()
+            });
+            fs.writeFileSync(DERIVATIVES_PATH, JSON.stringify(existing, null, 2), 'utf8');
+        }
+    } catch (e) {
+        console.error('Error saving derivative:', e);
+    }
+}
 
 // --- JS Logic Helpers (Fallback) ---
 
@@ -285,7 +317,20 @@ app.post('/api/generate', async (req, res) => {
     const { root, scheme } = req.body;
     if (!root || !scheme) return res.status(400).json({ ok: false, error: 'missing_fields' });
 
-    await runCmd(res, { command: 'generate', root, scheme });
+    try {
+        const result = await engine.execute({ command: 'generate', root, scheme });
+
+        // Save if successful
+        if (result.ok && result.word) {
+            // Need to find scheme name if possible, or pass it?
+            // For now passing empty scheme name or we find it from stored data
+            saveDerivative(root, result.word, 'Generated');
+        }
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
 // Validate
@@ -293,7 +338,34 @@ app.post('/api/validate', async (req, res) => {
     const { word, root } = req.body;
     if (!word || !root) return res.status(400).json({ ok: false, error: 'missing_fields' });
 
-    await runCmd(res, { command: 'validate', word, root });
+    try {
+        const result = await engine.execute({ command: 'validate', word, root });
+
+        // Save if valid
+        if (result.ok && result.belongs) {
+            saveDerivative(root, word, 'Validated');
+        }
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// Get Derivatives
+app.get('/api/derivatives/:root', (req, res) => {
+    try {
+        const root = decodeURIComponent(req.params.root).trim();
+        let existing = {};
+        try {
+            existing = JSON.parse(fs.readFileSync(DERIVATIVES_PATH, 'utf8'));
+        } catch (e) { existing = {}; }
+
+        const derivatives = existing[root] || [];
+        res.json({ ok: true, derivatives });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
 // Game Question

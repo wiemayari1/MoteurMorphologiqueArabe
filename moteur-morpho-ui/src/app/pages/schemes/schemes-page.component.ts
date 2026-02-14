@@ -97,9 +97,11 @@ export class SchemesPageComponent {
     this.api.addScheme(cleanName, cleanTempl).subscribe({
       next: () => {
         this.success = 'تمت الإضافة بنجاح!';
+        // Ajout local
+        this.schemes.push({ name: cleanName, template: cleanTempl });
         this.name = '';
         this.templ = '';
-        this.load();
+        this.loading = false;
       },
       error: (e: any) => {
         this.loading = false;
@@ -126,8 +128,13 @@ export class SchemesPageComponent {
     this.api.updateScheme(this.editingName, cleanTempl).subscribe({
       next: () => {
         this.success = 'تم التحديث بنجاح!';
+        // Mise à jour locale
+        const index = this.schemes.findIndex(s => s.name === this.editingName);
+        if (index !== -1) {
+          this.schemes[index].template = cleanTempl;
+        }
         this.cancelEdit();
-        this.load();
+        this.loading = false;
       },
       error: (e: any) => {
         this.loading = false;
@@ -165,12 +172,15 @@ export class SchemesPageComponent {
 
     this.api.deleteScheme(s.name).subscribe({
       next: () => {
+        // Supprimer localement pour mise à jour immédiate
+        this.schemes = this.schemes.filter(item => item.name !== s.name);
+
         // Si on supprime celui en cours d'édition, annuler l'édition
         if (this.editingName === s.name) {
           this.cancelEdit();
         }
         this.success = 'تم الحذف بنجاح!';
-        this.load();
+        this.loading = false;
       },
       error: (e: any) => {
         this.loading = false;

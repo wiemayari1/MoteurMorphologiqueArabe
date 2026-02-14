@@ -21,11 +21,10 @@
       <div class="input-group">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>اختر الجذر</mat-label>
-          <mat-select [(ngModel)]="selectedRoot">
+          <mat-select [(ngModel)]="selectedRoot" (ngModelChange)="onRootChange()">
             <mat-option value="">-- اختر جذراً --</mat-option>
-            <mat-option *ngFor="let r of roots" [value]="r.root">
-              {{ r.root }}
-              <span class="meaning" *ngIf="r.meaning">({{ r.meaning }})</span>
+            <mat-option *ngFor="let r of roots" [value]="r">
+              {{ r }}
             </mat-option>
           </mat-select>
           <mat-icon matSuffix>format_size</mat-icon>
@@ -35,10 +34,9 @@
       <!-- Sélection du Wazn -->
       <div class="input-group">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>اختر الوزن</mat-label>
-          <mat-select [(ngModel)]="selectedScheme">
-            <mat-option value="">-- اختر وزناً --</mat-option>
-            <mat-option *ngFor="let s of schemes" [value]="s.template">
+          <mat-label>اختر الأوزان (يمكنك اختيار أكثر من واحد)</mat-label>
+          <mat-select [(ngModel)]="selectedSchemes" (ngModelChange)="onInputChange()" multiple>
+            <mat-option *ngFor="let s of schemes" [value]="s">
               <span class="scheme-name">{{ s.name }}</span>
               <span class="scheme-template">({{ s.template }})</span>
             </mat-option>
@@ -51,12 +49,12 @@
       <div class="manual-input">
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>أو أدخل الجذر يدوياً</mat-label>
-          <input matInput [(ngModel)]="customRoot" maxlength="3" placeholder="كتب" />
+          <input matInput [(ngModel)]="customRoot" maxlength="3" placeholder="كتب" (ngModelChange)="onInputChange()" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>أو أدخل الوزن يدوياً</mat-label>
-          <input matInput [(ngModel)]="customScheme" placeholder="فَاعَلَ" />
+          <input matInput [(ngModel)]="customScheme" placeholder="فَاعَلَ" (ngModelChange)="onInputChange()" />
         </mat-form-field>
       </div>
 
@@ -76,14 +74,9 @@
 
       <!-- Succès -->
       <div class="success-result" *ngIf="generatedWords.length > 0; else errorResult">
-        <div class="result-header">
-          <mat-icon class="success-icon">check_circle</mat-icon>
-          <span>تم التوليد بنجاح!</span>
-        </div>
-
-        <div class="words-list">
-          <div class="word-item" *ngFor="let word of generatedWords">
-            <span class="value result-word">{{ word }}</span>
+        <div class="words-container">
+          <div class="generated-word" *ngFor="let word of generatedWords">
+            {{ word }}
           </div>
         </div>
       </div>
@@ -98,27 +91,13 @@
       </ng-template>
     </div>
 
-    <!-- Exemples -->
-    <div class="examples" *ngIf="!res && !loading">
-      <h4>أمثلة:</h4>
-      <div class="example-list">
-        <div class="example-item" (click)="selectedRoot='كتب'; selectedScheme='فَاعَلَ'">
-          <span class="ex-root">كتب</span>
-          <span class="ex-scheme">فَاعَلَ</span>
-          <span class="ex-arrow">→</span>
-          <span class="ex-result">كاتب</span>
-        </div>
-        <div class="example-item" (click)="selectedRoot='كتب'; selectedScheme='مَفْعُول'">
-          <span class="ex-root">كتب</span>
-          <span class="ex-scheme">مَفْعُول</span>
-          <span class="ex-arrow">→</span>
-          <span class="ex-result">مكتوب</span>
-        </div>
-        <div class="example-item" (click)="selectedRoot='درس'; selectedScheme='مَفْعَلَة'">
-          <span class="ex-root">درس</span>
-          <span class="ex-scheme">مَفْعَلَة</span>
-          <span class="ex-arrow">→</span>
-          <span class="ex-result">مدرسة</span>
+    <!-- Historique des Dérivés -->
+    <div class="derivatives-history" *ngIf="derivatives.length > 0 && !loading">
+      <h3>اشتقاقات محفوظة للجذر "{{ selectedRoot }}"</h3>
+      <div class="history-list">
+        <div class="history-item" *ngFor="let d of derivatives">
+          <span class="history-word">{{ d.word }}</span>
+          <span class="history-scheme" *ngIf="d.scheme">({{ d.scheme }})</span>
         </div>
       </div>
     </div>
