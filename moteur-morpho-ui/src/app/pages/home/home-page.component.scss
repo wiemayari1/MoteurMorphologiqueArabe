@@ -41,65 +41,36 @@
   }
 }
 
-/* Tiles Grid - 5 Cards (3+2) */
+/* Tiles Grid - 5 Cards in one row */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-xl);
-  max-width: 900px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--spacing-lg);
+  max-width: 1200px;
   margin: 0 auto;
-
-  &> :nth-child(n+4) {
-    grid-column: span 1;
-  }
-
-  /* Centering the last 2 items */
-  &> :nth-child(4) {
-    grid-column: 1 / 2;
-    margin-left: -50%;
-  }
-
-  &> :nth-child(5) {
-    grid-column: 2 / 3;
-    margin-left: -50%;
-  }
-}
-
-@media (min-width: 901px) {
-  .tiles {
-    grid-template-columns: repeat(3, 1fr);
-
-    &> :nth-child(4) {
-      grid-column: 1 / 2;
-      margin-left: 50%;
-    }
-
-    &> :nth-child(5) {
-      grid-column: 2 / 3;
-      margin-left: 50%;
-    }
-  }
+  align-items: stretch;
 }
 
 @media (max-width: 1100px) {
   .tiles {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 800px;
+
+    /* Center the last two items if they wrap? 
+       To keep it simple and clean, just let them auto-flow.
+       Or if we want to center the grid, justify-content: center.
+    */
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .tiles {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
   }
 }
 
-@media (max-width: 620px) {
-  .tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 400px) {
+@media (max-width: 480px) {
   .tiles {
     grid-template-columns: 1fr;
   }
@@ -110,24 +81,27 @@
   text-decoration: none;
   color: inherit;
   aspect-ratio: 1 / 1;
-  border-radius: 20px;
+  border-radius: 24px;
+  /* More rounded */
   background: var(--color-white);
-  border: none;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-  /* Subtle shadow per feedback */
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  /* Very subtle border */
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  /* Soft/Diffuse shadow */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-md);
-  transition: all var(--transition-base);
+  gap: var(--spacing-lg);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   cursor: pointer;
   animation: fadeIn 0.5s ease-out forwards;
   opacity: 0;
+  padding: var(--spacing-md);
 
   &:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.12);
   }
 }
 
@@ -164,71 +138,66 @@
 }
 
 .tile__label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-black);
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  /* Slightly larger */
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
   text-align: center;
-  line-height: var(--line-height-tight);
+  margin-top: 4px;
 }
 
-/* Glossy App Icon */
-/* Updated App Icon Styles */
+/* Glossy App Icon - Unified Style */
 .app-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  background: var(--color-gray-100);
-  /* Light gray background per feedback */
+  width: 90px;
+  /* Larger icons like photo */
+  height: 90px;
+  border-radius: 28px;
+  /* Squircle */
+  /* Light cyan/blue gradient background for ALL icons */
+  background: linear-gradient(135deg, #E0F7FA 0%, #E1F5FE 100%);
   display: grid;
   place-items: center;
   transition: all var(--transition-base);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 4px 12px rgba(0, 188, 212, 0.15);
+  /* Inner glow + soft shadow */
 }
 
 .tile:hover .app-icon {
-  transform: scale(1.1);
-}
-
-.tile:hover .app-icon {
-  transform: scale(1.05);
+  transform: scale(1.05) rotate(3deg);
 }
 
 .app-icon__glyph {
-  font-size: 36px;
-  width: 36px;
-  height: 36px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
-  z-index: 1;
+  font-size: 42px;
+  width: 42px;
+  height: 42px;
+  /* Default Color */
+  color: #00838F;
+  /* Cyan-800 */
 }
 
-/* Icon Color Variants - Using Design System Colors */
-.app-icon--teal {
-  .app-icon__glyph {
-    color: var(--color-primary-light);
-  }
+/* Icon Color Variants - Just changing GLYPH color now, not background */
+.app-icon--teal .app-icon__glyph {
+  color: #00695C;
 }
 
-.app-icon--cyan {
-  .app-icon__glyph {
-    color: var(--color-secondary);
-  }
+/* Roots - Teal */
+.app-icon--cyan .app-icon__glyph {
+  color: #0277BD;
 }
 
-.app-icon--primary {
-  .app-icon__glyph {
-    color: var(--color-primary-dark);
-  }
+/* Schemes - Blue */
+.app-icon--primary .app-icon__glyph {
+  color: #1565C0;
 }
 
-.app-icon--warm {
-  .app-icon__glyph {
-    color: var(--color-warning);
-  }
+.app-icon--warm .app-icon__glyph {
+  color: #00838F;
 }
 
-.app-icon--brown {
-  .app-icon__glyph {
-    color: var(--color-accent);
-  }
+/* Game - Cyan (matching photo style) */
+.app-icon--brown .app-icon__glyph {
+  color: #4E342E;
 }
 
 /* Responsive Adjustments */

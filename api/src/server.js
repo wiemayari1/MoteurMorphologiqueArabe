@@ -301,17 +301,24 @@ app.get('/api/game/question', async (req, res) => {
     // We send a direct command for game question
     try {
         // Try engine first
+        // Try engine first with timeout
         if (engine.process) {
-            const result = await engine.execute({ command: 'game_question' });
+            const enginePromise = engine.execute({ command: 'game_question' });
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Engine timeout")), 500)
+            );
+
+            const result = await Promise.race([enginePromise, timeoutPromise]);
             return res.json(result);
         }
         throw new Error("Engine not running");
     } catch (err) {
         // Fallback: JS Implementation
-        console.warn("Using JS Game Logic due to:", err.message);
+        // console.warn("Using JS Game Logic due to:", err.message);
 
         const { roots, schemes } = loadGameDataInternal();
         if (roots.length === 0 || schemes.length === 0) {
+            console.error("No data found in roots.txt or schemes.txt");
             return res.json({ ok: false, error: 'no_data' });
         }
 
