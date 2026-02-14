@@ -53,6 +53,72 @@ function ensureFilesExist() {
 }
 ensureFilesExist();
 
+// --- JS Logic Helpers (Fallback) ---
+
+function normalizeAr(str) {
+    if (!str) return '';
+    // Normalize Alef
+    let res = str.replace(/[أإآ]/g, 'ا');
+    // Remove diacritics
+    res = res.replace(/[ًٌٍَُِّْ]/g, '');
+    return res;
+}
+
+function applyTemplate(root, template) {
+    const r = normalizeAr(root);
+    if (r.length !== 3) return null;
+
+    let res = '';
+    let j = 0; // index in template, but we iterate chars
+    // Template actually: '1َ2َ3َ' where numbers are placeholders?
+    // Wait, the schemes.txt in line 52 says: 'فَعَلَ|1َ2َ3َ' and 'مَفْعُول|مَ1ْ2ُو3'
+    // The C++ code uses 'ف', 'ع', 'ل' logic:
+    //      if (c == U'ف') out.push_back(root[0]);
+    //      else if (c == U'ع') out.push_back(root[1]);
+    //      else if (c == U'ل') out.push_back(root[2]);
+    //
+    // BUT the data file (line 52) seems to use '1','2','3'.
+    // API/server.js line 52: 'فَعَلَ|1َ2َ3َ'
+    // Let's check api.service.ts line 43: pattern comme "1َ2َ3َ"
+    //
+    // I need to support both or verify what the data uses.
+    // Implementation Plan used schemes.txt creation.
+    // C++ apply_template (morpho.cpp line 41) uses 'ف' 'ع' 'ل'.
+    //
+    // Let's assume the data file is consistent with C++.
+    // If server.js init creates '123', maybe C++ handles that?
+    // No, morpho.cpp explicitly checks for 'ف','ع','ل'.
+    // The previous server.js creation (line 52) might be inconsistent with C++ if C++ expects Fa/Ain/Lam.
+    //
+    // Quick fix: Support both 1/2/3 and Fa/Ain/Lam in JS to be safe.
+
+    for (const c of template) {
+        if (c === 'ف' || c === '1') res += r[0];
+        else if (c === 'ع' || c === '2') res += r[1];
+        else if (c === 'ل' || c === '3') res += r[2];
+        else res += c;
+    }
+    return res;
+}
+
+function loadGameDataInternal() {
+    try {
+        const rootsContent = fs.readFileSync(DATA_PATH, 'utf8');
+        const roots = rootsContent.split('\n').filter(l => l.trim()).map(l => l.trim());
+
+        const schemesContent = fs.readFileSync(SCHEMES_PATH, 'utf8');
+        const schemes = schemesContent.split('\n')
+            .filter(l => l.trim() && l.includes('|'))
+            .map(l => {
+                const parts = l.split('|');
+                return { name: parts[0].trim(), templ: parts[1].trim() };
+            });
+        return { roots, schemes };
+    } catch (e) {
+        return { roots: [], schemes: [] };
+    }
+}
+
 // --- MorphoBridge Class ---
 class MorphoBridge extends EventEmitter {
     constructor() {
@@ -234,22 +300,66 @@ app.post('/api/validate', async (req, res) => {
 app.get('/api/game/question', async (req, res) => {
     // We send a direct command for game question
     try {
-        const result = await engine.execute({ command: 'game_question' });
-        res.json(result);
+        // Try engine first
+        if (engine.process) {
+            const result = await engine.execute({ command: 'game_question' });
+            return res.json(result);
+        }
+        throw new Error("Engine not running");
     } catch (err) {
-        // Fallback for demo/errors
-        const roots = ['كتب', 'درس', 'علم'];
-        const schemes = ['فَعَلَ', 'فَاعَلَ', 'مَفْعُول'];
-        const randomRoot = roots[Math.floor(Math.random() * roots.length)];
-        const randomScheme = schemes[Math.floor(Math.random() * schemes.length)];
+        // Fallback: JS Implementation
+        console.warn("Using JS Game Logic due to:", err.message);
+
+        const { roots, schemes } = loadGameDataInternal();
+        if (roots.length === 0 || schemes.length === 0) {
+            return res.json({ ok: false, error: 'no_data' });
+        }
+
+        const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        // 1. Pick Correct Answer
+        let correctRoot, correctScheme, correctWord;
+        let pAttempts = 0;
+
+        while (!correctWord && pAttempts < 20) {
+            pAttempts++;
+            const r = getRandom(roots);
+            const s = getRandom(schemes);
+            const w = applyTemplate(r, s.templ);
+            if (w) {
+                correctRoot = r;
+                correctScheme = s;
+                correctWord = w;
+            }
+        }
+
+        if (!correctWord) return res.json({ ok: false, error: 'generation_failed' });
+
+        // 2. Generate Distractors
+        const options = new Set([correctWord]);
+        let dAttempts = 0;
+
+        while (options.size < 4 && dAttempts < 100) {
+            dAttempts++;
+            const r = getRandom(roots);
+            const s = getRandom(schemes);
+            const w = applyTemplate(r, s.templ);
+            if (w) options.add(w);
+        }
+
+        const optionsArray = Array.from(options);
+        // Fill if needed (shouldn't happen with enough data but safety first)
+        while (optionsArray.length < 4) optionsArray.push('؟؟؟');
+
+        // Shuffle
+        optionsArray.sort(() => Math.random() - 0.5);
 
         res.json({
             ok: true,
-            root: randomRoot,
-            scheme: randomScheme,
-            options: ['option1', 'option2', 'option3', randomRoot],
-            correct_index: 3,
-            error: "Engine fallback: " + err.message
+            root: correctRoot,
+            scheme: correctScheme.name,
+            options: optionsArray,
+            correct_index: optionsArray.indexOf(correctWord)
         });
     }
 });
