@@ -62,10 +62,14 @@ struct Args {
   bool do_generate = false;
   bool do_validate = false;
   bool do_game = false;
+  bool do_list_roots = false;
+  bool do_list_schemes = false;
+  bool do_add_root = false;
 
   string root_utf8;
   string scheme_name_utf8;
   string word_utf8;
+  string meaning_utf8; // for adding root
 };
 
 static void print_help(const char *prog) {
@@ -76,7 +80,10 @@ static void print_help(const char *prog) {
             << "Commands:\n"
             << "  --generate --root \"كتب\" --scheme \"مفعول\"\n"
             << "  --validate --word \"مكتوب\" --root \"كتب\"\n"
-            << "  --game\n\n"
+            << "  --game\n"
+            << "  --list-roots\n"
+            << "  --list-schemes\n"
+            << "  --add-root --root \"كتب\" [--meaning \"écrire\"]\n\n"
             << "Options:\n"
             << "  --json           Output JSON\n"
             << "  --data <path>    Path to roots file\n"
@@ -114,6 +121,12 @@ static bool parse_args(int argc, char **argv, Args &a) {
       a.do_validate = true;
     } else if (arg == "--game") {
       a.do_game = true;
+    } else if (arg == "--list-roots") {
+      a.do_list_roots = true;
+    } else if (arg == "--list-schemes") {
+      a.do_list_schemes = true;
+    } else if (arg == "--add-root") {
+      a.do_add_root = true;
     } else if (arg == "--root") {
       auto v = get_opt_value(i, argc, argv);
       if (!v)
@@ -129,6 +142,11 @@ static bool parse_args(int argc, char **argv, Args &a) {
       if (!v)
         return false;
       a.word_utf8 = *v;
+    } else if (arg == "--meaning") {
+      auto v = get_opt_value(i, argc, argv);
+      if (!v)
+        return false;
+      a.meaning_utf8 = *v;
     } else {
       std::cerr << "Unknown argument: " << arg << "\n";
       return false;
@@ -140,11 +158,12 @@ static bool parse_args(int argc, char **argv, Args &a) {
     return false;
   }
 
-  int cmd_count =
-      (a.do_generate ? 1 : 0) + (a.do_validate ? 1 : 0) + (a.do_game ? 1 : 0);
+  int cmd_count = (a.do_generate ? 1 : 0) + (a.do_validate ? 1 : 0) +
+                  (a.do_game ? 1 : 0) + (a.do_list_roots ? 1 : 0) +
+                  (a.do_list_schemes ? 1 : 0) + (a.do_add_root ? 1 : 0);
   if (cmd_count != 1) {
-    std::cerr
-        << "Choose exactly one command: --generate OR --validate OR --game\n";
+    std::cerr << "Choose exactly one command: --generate, --validate, --game, "
+                 "--list-roots, --list-schemes, --add-root\n";
     return false;
   }
 
@@ -157,6 +176,12 @@ static bool parse_args(int argc, char **argv, Args &a) {
   if (a.do_validate) {
     if (a.word_utf8.empty() || a.root_utf8.empty()) {
       std::cerr << "Missing --word or --root for --validate\n";
+      return false;
+    }
+  }
+  if (a.do_add_root) {
+    if (a.root_utf8.empty()) {
+      std::cerr << "Missing --root for --add-root\n";
       return false;
     }
   }
@@ -594,6 +619,99 @@ int main(int argc, char **argv) {
     return run_game(tree, ht, a.json);
   }
 
+  if (a.do_list_roots) {
+    if (a.json)
+      std::cout << "{\"ok\":true,\"roots\":[";
+    else
+      std::cout << "Liste des racines:\n";
+
+    bool first = true;
+    tree.getAllKeys([&](const AVLNode *n) {
+      if (a.json) {
+        if (!first)
+          std::cout << ",";
+        std::cout << "\"" << json_escape(u32_to_utf8(n->key)) << "\"";
+        first = false;
+      } else {
+        std::cout << "- " << u32_to_utf8(n->key) << "\n";
+      }
+    });
+
+    if (a.json)
+      std::cout << "]}\n";
+    return 0;
+  }
+
+  if (a.do_list_schemes) {
+    if (a.json)
+      std::cout << "{\"ok\":true,\"schemes\":[";
+    else
+      std::cout << "Liste des schèmes:\n";
+
+    bool first = true;
+    for (const auto &s : ht.allSchemes()) {
+      if (a.json) {
+        if (!first)
+          std::cout << ",";
+        std::cout << "{\"name\":\"" << json_escape(u32_to_utf8(s.name))
+                  << "\",\"template\":\"" << json_escape(u32_to_utf8(s.templ))
+                  << "\"}";
+        first = false;
+      } else {
+        std::cout << "- " << u32_to_utf8(s.name) << " (" << u32_to_utf8(s.templ)
+                  << ")\n";
+      }
+    }
+
+    if (a.json)
+      std::cout << "]}\n";
+    return 0;
+  }
+
+  if (a.do_add_root) {
+    auto r_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
+    if (r_u32.size() != 3) {
+      if (a.json)
+        std::cout << "{\"ok\":false,\"error\":\"invalid_root_length\"}\n";
+      else
+        std::cerr << "Erreur: la racine doit faire 3 lettres\n";
+      return 10;
+    }
+
+    if (tree.contains(r_u32)) {
+      if (a.json)
+        std::cout << "{\"ok\":false,\"error\":\"duplicate_root\"}\n";
+      else
+        std::cerr << "Erreur: racine déjà existante\n";
+      return 11;
+    }
+
+    // Update Memory
+    tree.insert(r_u32);
+
+    // Update File (Persistence)
+    std::ofstream f(
+        a.data_path,
+        std::ios::app |
+            std::ios::binary); // binary to write utf8 bytes directly
+    if (f) {
+      f << a.root_utf8 << "\n";
+    } else {
+      if (a.json)
+        std::cout << "{\"ok\":false,\"error\":\"file_write_error\"}\n";
+      else
+        std::cerr << "Erreur: impossible d'écrire dans le fichier\n";
+      return 12;
+    }
+
+    if (a.json)
+      std::cout << "{\"ok\":true,\"root\":\"" << json_escape(a.root_utf8)
+                << "\"}\n";
+    else
+      std::cout << "Racine ajoutée: " << a.root_utf8 << "\n";
+    return 0;
+  }
+
   {
     auto word_u32 = utf8_to_u32(a.word_utf8);
     auto root_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
@@ -609,6 +727,14 @@ int main(int argc, char **argv) {
           ok = true;
           matched.push_back(s.name);
         }
+      }
+    }
+
+    // SPEC COMPLIANCE: Update AVL Tree if validated
+    if (ok) {
+      if (tree.contains(root_u32)) {
+        tree.addDerived(root_u32, word_u32);
+        tree.incrementFrequency(root_u32);
       }
     }
 
