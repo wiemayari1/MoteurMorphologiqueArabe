@@ -63,6 +63,13 @@ export class GeneratePageComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    // Safety timeout in case everything else fails
+    setTimeout(() => {
+      if (this.loadingData) {
+        this.loadingData = false;
+        this.loadError = 'يبدو أن الخادم لا يستجيب. يرجى التأكد من تشغيله.';
+      }
+    }, 5000);
   }
 
   onInputChange() {
