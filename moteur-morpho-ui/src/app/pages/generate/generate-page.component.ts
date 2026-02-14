@@ -242,6 +242,16 @@ export class GeneratePageComponent implements OnInit {
       return;
     }
 
+    if (this.customRoot && !/^[\u0600-\u06FF\s]+$/.test(this.customRoot)) {
+      this.error = 'الجذر يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
+    if (this.customScheme && !/^[\u0600-\u06FF\s0-9]+$/.test(this.customScheme)) {
+      this.error = 'الوزن يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
     this.loading = true;
     this.error = null;
     this.generatedWords = [];

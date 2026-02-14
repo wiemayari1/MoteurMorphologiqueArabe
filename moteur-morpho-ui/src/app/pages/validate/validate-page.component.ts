@@ -42,12 +42,19 @@ export class ValidatePageComponent {
 
   submit() {
     this.res = null;
+    this.errorMessage = null;
+
+    if (!/^[\u0600-\u06FF\s]+$/.test(this.word) || !/^[\u0600-\u06FF\s]+$/.test(this.root)) {
+      this.errorMessage = 'الرجاء إدخال أحرف عربية فقط';
+      this.snackBar.open(this.errorMessage, 'إغلاق', { duration: 3000 });
+      return;
+    }
+
     this.loading = true;
     this.api.validate({ word: this.word, root: this.root })
       .subscribe({
         next: (r) => {
           this.res = r;
-          this.errorMessage = null;
           this.loading = false;
         },
         error: (e) => {
@@ -58,6 +65,7 @@ export class ValidatePageComponent {
         }
       });
   }
+
 
   onInputChange() {
     this.errorMessage = null;

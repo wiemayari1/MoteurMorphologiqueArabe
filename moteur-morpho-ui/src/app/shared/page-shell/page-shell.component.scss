@@ -109,28 +109,7 @@
   width: 100%;
 }
 
-/* Integrated Letter Animation */
-.animated-letters {
-  display: flex;
-  gap: var(--spacing-md);
-  justify-content: center;
 
-  .letter {
-    font-size: var(--font-size-2xl);
-    font-weight: var(--font-weight-black);
-    color: var(--color-primary-light);
-  }
-}
-
-@keyframes floatLetters {
-  from {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  to {
-    transform: translateY(-20px) rotate(10deg);
-  }
-}
 
 .book-img {
   width: min(680px, 100%);

@@ -52,12 +52,22 @@ export class SchemesPageComponent {
     this.error = '';
     this.success = '';
 
+    // Safety timeout
+    const timeout = setTimeout(() => {
+      if (this.loading) {
+        this.loading = false;
+        this.error = 'تجاوزت مهلة الانتظار';
+      }
+    }, 10000);
+
     this.api.listSchemes().subscribe({
       next: (r) => {
+        clearTimeout(timeout);
         this.schemes = r.schemes ?? [];
         this.loading = false;
       },
       error: (e: any) => {
+        clearTimeout(timeout);
         this.error = e?.message ?? 'خطأ في تحميل الأوزان';
         this.loading = false;
       },

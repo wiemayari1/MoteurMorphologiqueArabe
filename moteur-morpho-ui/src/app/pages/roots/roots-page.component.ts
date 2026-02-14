@@ -82,8 +82,8 @@ export class RootsPageComponent {
     this.info = null;
     this.success = null;
 
-    if (!this.isTriliteralArabic(root)) {
-      this.error = 'الرجاء إدخال جذر ثلاثي عربي صحيح (مثال: كتب).';
+    if (!/^[\u0600-\u06FF]{3}$/.test(root)) {
+      this.error = 'الرجاء إدخال جذر ثلاثي عربي صحيح (3 أحرف عربية فقط).';
       return;
     }
 
