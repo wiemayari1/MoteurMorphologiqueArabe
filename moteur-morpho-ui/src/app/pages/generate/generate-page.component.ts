@@ -46,7 +46,9 @@ export class GeneratePageComponent implements OnInit {
   derivatives: DerivativeItem[] = []; // History of valid derivatives
 
   loading = false;
+  loadingData = true; // Added for initial data loading
   error: string | null = null;
+  loadError: string | null = null; // Separate error for data loading
 
   private searchSubject = new Subject<void>();
 
@@ -80,37 +82,40 @@ export class GeneratePageComponent implements OnInit {
   }
 
   loadData() {
-    // === Racines ===
-    this.apiService.getRoots().subscribe({
-      next: (response: RootsResponse | any) => {
-        if (!response) return;
+    this.loadingData = true;
+    this.loadError = null;
+
+    forkJoin({
+      roots: this.apiService.getRoots(),
+      schemes: this.apiService.getSchemes()
+    }).subscribe({
+      next: (results: any) => {
+        this.loadingData = false;
+
+        // Process Roots
+        const rootsResponse = results.roots;
         let rootItems: any[] = [];
-        if (Array.isArray(response)) rootItems = response;
-        else if (response.roots && Array.isArray(response.roots)) rootItems = response.roots;
+        if (Array.isArray(rootsResponse)) rootItems = rootsResponse;
+        else if (rootsResponse?.roots && Array.isArray(rootsResponse.roots)) rootItems = rootsResponse.roots;
 
         if (rootItems.length > 0) {
           this.roots = rootItems
-            .map(item => {
+            .map((item: any) => {
               if (typeof item === 'string') return item.trim();
               if (item && typeof item === 'object') return ((item as any).root || '').trim();
               return '';
             })
-            .filter((r): r is string => r.length > 0);
+            .filter((r: string) => r.length > 0);
         }
-      },
-      error: (err) => console.warn('Error loading roots', err)
-    });
 
-    // === Schémas ===
-    this.apiService.getSchemes().subscribe({
-      next: (response: SchemesResponse | any) => {
-        if (!response) return;
+        // Process Schemes
+        const schemesResponse = results.schemes;
         let schemeItems: any[] = [];
-        if (Array.isArray(response)) schemeItems = response;
-        else if (response.schemes && Array.isArray(response.schemes)) schemeItems = response.schemes;
+        if (Array.isArray(schemesResponse)) schemeItems = schemesResponse;
+        else if (schemesResponse?.schemes && Array.isArray(schemesResponse.schemes)) schemeItems = schemesResponse.schemes;
 
         if (schemeItems.length > 0) {
-          this.schemes = schemeItems.map(item => {
+          this.schemes = schemeItems.map((item: any) => {
             const obj = item && typeof item === 'object' ? item : {};
             return {
               name: obj.name ?? 'وزن غير معروف',
@@ -119,7 +124,11 @@ export class GeneratePageComponent implements OnInit {
           });
         }
       },
-      error: (err) => console.warn('Error loading schemes', err)
+      error: (err) => {
+        this.loadingData = false;
+        this.loadError = 'فشل تحميل البيانات. يرجى التأكد من تشغيل الخادم.';
+        console.warn('Error loading data', err);
+      }
     });
   }
 
