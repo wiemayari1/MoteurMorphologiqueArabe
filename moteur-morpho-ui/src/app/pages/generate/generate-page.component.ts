@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, forkJoin, timeout, finalize, takeUntil, catchError, of } from 'rxjs';
+import { Subject, forkJoin, takeUntil, catchError, of, timeout } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -12,8 +13,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { PageShellComponent } from '../../shared/page-shell/page-shell.component';
-import { ApiService, SchemeItem, DerivativeItem } from '../../services/api.service';
+import { ApiService, SchemeItem, DerivativeItem, GenerateResponse } from '../../services/api.service';
 
+// Interface pour les résultats enrichis
 export interface GeneratedResult {
   word: string;
   root: string;
@@ -41,133 +43,146 @@ export interface GeneratedResult {
   styleUrls: ['./generate-page.component.scss']
 })
 export class GeneratePageComponent implements OnInit, OnDestroy {
+  // Données du formulaire
   roots: string[] = [];
   schemes: SchemeItem[] = [];
-
+  
   selectedRoot: string = '';
   selectedSchemes: SchemeItem[] = [];
   customRoot: string = '';
   customScheme: string = '';
 
+  // Résultats
   generatedResults: GeneratedResult[] = [];
   derivatives: DerivativeItem[] = [];
 
+  // États
   loading = false;
   loadingData = true;
   error: string | null = null;
   loadError: string | null = null;
 
+  // RxJS
   private destroy$ = new Subject<void>();
-  private inputSubject = new Subject<string>();
+  private inputSubject = new Subject<void>();
 
   constructor(private apiService: ApiService) {
+    // Debounce pour la génération automatique
     this.inputSubject.pipe(
-      debounceTime(500),
+      debounceTime(600),
       takeUntil(this.destroy$)
     ).subscribe(() => {
-      if (this.canGenerate) {
+      if (this.canGenerate && !this.loading) {
         this.generate();
       }
     });
   }
 
-  ngOnInit() {
-    this.loadData();
+  ngOnInit(): void {
+    this.loadInitialData();
     
-    // Timeout de sécurité plus long (10s)
+    // Timeout de sécurité
     setTimeout(() => {
       if (this.loadingData) {
         this.loadingData = false;
-        this.loadError = 'انتهت مهلة الاتصال بالخادم. تأكد من تشغيل: node src/server.js على المنفذ 3001';
+        this.loadError = 'انتهت مهلة الاتصال. تأكد من تشغيل الخادم على المنفذ 3001';
       }
-    }, 10000);
+    }, 15000);
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  onInputChange() {
-    this.error = null;
-    this.inputSubject.next(Date.now().toString());
-  }
+  // ========== CHARGEMENT DES DONNÉES ==========
 
-  onRootChange() {
-    this.loadDerivatives();
-    this.onInputChange();
-  }
-
-  loadData() {
+  loadInitialData(): void {
+    console.log('Chargement des données...');
     this.loadingData = true;
     this.loadError = null;
-    this.error = null;
-
-    console.log('Chargement des données depuis l\'API...');
 
     forkJoin({
-      roots: this.apiService.getRoots().pipe(
-        timeout(8000),
+      rootsResponse: this.apiService.getRoots().pipe(
+        timeout(10000),
         catchError(err => {
-          console.error('Erreur roots:', err);
-          return of({ ok: false, roots: [] });
+          console.error('Erreur chargement racines:', err);
+          return of({ ok: false, roots: [], error: err.message });
         })
       ),
-      schemes: this.apiService.getSchemes().pipe(
-        timeout(8000),
+      schemesResponse: this.apiService.getSchemes().pipe(
+        timeout(10000),
         catchError(err => {
-          console.error('Erreur schemes:', err);
-          return of({ ok: false, schemes: [] });
+          console.error('Erreur chargement schèmes:', err);
+          return of({ ok: false, schemes: [], error: err.message });
         })
       )
     }).pipe(
-      finalize(() => {
-        this.loadingData = false;
-      })
+      takeUntil(this.destroy$)
     ).subscribe({
-      next: (results) => {
-        console.log('Réponse roots:', results.roots);
-        console.log('Réponse schemes:', results.schemes);
+      next: ({ rootsResponse, schemesResponse }) => {
+        console.log('Réponse racines:', rootsResponse);
+        console.log('Réponse schèmes:', schemesResponse);
 
         // Traitement des racines
-        if (results.roots.ok && Array.isArray(results.roots.roots)) {
-          this.roots = results.roots.roots
-            .map((item: any) => {
-              if (typeof item === 'string') return item.trim();
-              if (item && typeof item === 'object') return (item.root || '').trim();
-              return '';
-            })
-            .filter((r: string) => r.length > 0)
-            .sort((a: string, b: string) => a.localeCompare(b, 'ar'));
+        if (rootsResponse.ok && rootsResponse.roots) {
+          this.roots = this.extractRoots(rootsResponse.roots);
         } else {
-          this.loadError = 'فشل تحميل الجذور من الخادم';
+          console.warn('Échec chargement racines:', rootsResponse.error);
         }
 
         // Traitement des schèmes
-        if (results.schemes.ok && Array.isArray(results.schemes.schemes)) {
-          this.schemes = results.schemes.schemes.map((item: any) => ({
-            name: item.name || 'وزن غير معروف',
-            template: item.template || item.pattern || '؟؟؟',
-            pattern: item.pattern || item.template || '؟؟؟'
-          }));
+        if (schemesResponse.ok && schemesResponse.schemes) {
+          this.schemes = schemesResponse.schemes;
         } else {
-          this.loadError = 'فشل تحميل الأوزان من الخادم';
+          console.warn('Échec chargement schèmes:', schemesResponse.error);
         }
 
-        // Si les deux sont vides, c'est probablement un problème de connexion
+        this.loadingData = false;
+
+        // Vérifier si on a des données
         if (this.roots.length === 0 && this.schemes.length === 0) {
-          this.loadError = 'لا يمكن الاتصال بالخادم. تأكد من تشغيل: node src/server.js';
+          this.loadError = 'لا يمكن تحميل البيانات. تأكد من تشغيل الخادم.';
         }
       },
       error: (err) => {
         console.error('Erreur forkJoin:', err);
         this.loadingData = false;
-        this.loadError = 'خطأ في الاتصال: ' + (err.message || 'الخادم غير متاح');
+        this.loadError = 'فشل الاتصال بالخادم: ' + (err.message || 'خطأ غير معروف');
       }
     });
   }
 
-  loadDerivatives() {
+  private extractRoots(rootsData: any[]): string[] {
+    if (!Array.isArray(rootsData)) return [];
+    
+    return rootsData
+      .map((item: any) => {
+        if (typeof item === 'string') return item.trim();
+        if (item && typeof item === 'object') {
+          return (item.root || item.value || item.name || '').trim();
+        }
+        return '';
+      })
+      .filter((r: string) => r.length > 0)
+      .sort((a: string, b: string) => a.localeCompare(b, 'ar'));
+  }
+
+  // ========== GESTION DES ÉVÉNEMENTS ==========
+
+  onInputChange(): void {
+    this.error = null;
+    this.inputSubject.next();
+  }
+
+  onRootChange(): void {
+    this.loadDerivatives();
+    this.onInputChange();
+  }
+
+  // ========== CHARGEMENT DES DÉRIVÉS ==========
+
+  loadDerivatives(): void {
     const root = (this.selectedRoot || this.customRoot).trim();
     if (!root) {
       this.derivatives = [];
@@ -175,10 +190,10 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
     }
 
     this.apiService.getDerivatives(root).pipe(
-      timeout(5000),
+      timeout(8000),
       takeUntil(this.destroy$),
       catchError(err => {
-        console.error('Erreur derivatives:', err);
+        console.error('Erreur chargement dérivés:', err);
         return of({ ok: false, derivatives: [] });
       })
     ).subscribe({
@@ -190,39 +205,34 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ========== GÉNÉRATION ==========
+
   get canGenerate(): boolean {
-    const hasRoot = (this.selectedRoot || this.customRoot)?.trim().length > 0;
-    const hasScheme = this.selectedSchemes.length > 0 || this.customScheme?.trim().length > 0;
+    const hasRoot = !!(this.selectedRoot || this.customRoot)?.trim();
+    const hasScheme = this.selectedSchemes.length > 0 || !!this.customScheme?.trim();
     return hasRoot && hasScheme && !this.loading;
   }
 
-  generate() {
+  generate(): void {
     const root = (this.selectedRoot || this.customRoot).trim();
+    
+    // Préparer les schèmes à traiter
+    const schemesToProcess: { name: string; template: string }[] = [
+      ...this.selectedSchemes.map(s => ({ name: s.name, template: s.template })),
+      ...(this.customScheme?.trim() ? [{ name: 'مخصص', template: this.customScheme.trim() }] : [])
+    ];
 
-    let schemesToProcess: { template: string; name: string }[] = [];
-    this.selectedSchemes.forEach(s => {
-      schemesToProcess.push({ template: s.template, name: s.name });
-    });
-
-    if (this.customScheme?.trim()) {
-      schemesToProcess.push({ 
-        template: this.customScheme.trim(), 
-        name: 'مخصص' 
-      });
-    }
-
+    // Validations
     if (!root) {
       this.error = 'الرجاء اختيار الجذر';
       return;
     }
-
     if (schemesToProcess.length === 0) {
       this.error = 'الرجاء اختيار وزن واحد على الأقل';
       return;
     }
-
-    if (this.customRoot && !/^[\u0600-\u06FF\s]+$/.test(this.customRoot)) {
-      this.error = 'الجذر يجب أن يحتوي على أحرف عربية فقط';
+    if (this.customRoot && !/^[\u0600-\u06FF]{3,4}$/.test(this.customRoot.trim())) {
+      this.error = 'الجذر يجب أن يكون 3 أو 4 أحرف عربية';
       return;
     }
 
@@ -230,22 +240,22 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
     this.error = null;
     this.generatedResults = [];
 
-    const requests = schemesToProcess.map(s =>
-      this.apiService.generate({ root, scheme: s.template }).pipe(
-        timeout(15000), // Timeout augmenté pour l'engine C++
+    // Appels API parallèles
+    const requests = schemesToProcess.map(scheme => 
+      this.apiService.generate({ root, scheme: scheme.template }).pipe(
+        timeout(20000),
         catchError(err => {
-          console.error(`Erreur génération pour ${s.name}:`, err);
-          return of({ ok: false, error: err.message });
+          console.error(`Erreur génération ${scheme.name}:`, err);
+          return of({ ok: false, error: err.message } as GenerateResponse);
         })
       )
     );
 
     forkJoin(requests).pipe(
-      finalize(() => {
-        this.loading = false;
-      })
+      takeUntil(this.destroy$)
     ).subscribe({
       next: (responses) => {
+        this.loading = false;
         const results: GeneratedResult[] = [];
 
         responses.forEach((res, index) => {
@@ -262,22 +272,25 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
         this.generatedResults = results;
 
         if (results.length === 0) {
-          this.error = 'فشل التوليد لجميع الأوزان المختارة';
+          this.error = 'فشل توليد الكلمات. تحقق من صحة الجذر والوزن.';
         } else if (results.length < schemesToProcess.length) {
-          this.error = `تم توليد ${results.length} من ${schemesToProcess.length} كلمات فقط`;
+          console.warn(`Partiel: ${results.length}/${schemesToProcess.length} générés`);
         }
 
+        // Recharger la famille morphologique
         this.loadDerivatives();
       },
       error: (err) => {
         this.loading = false;
-        this.error = 'خطأ في الاتصال بالخادم: ' + err.message;
-        console.error('Generation error:', err);
+        this.error = 'خطأ في الاتصال: ' + (err.message || 'فشل التوليد');
+        console.error('Erreur génération:', err);
       }
     });
   }
 
-  reset() {
+  // ========== UTILITAIRES ==========
+
+  reset(): void {
     this.selectedRoot = '';
     this.selectedSchemes = [];
     this.customRoot = '';
@@ -285,10 +298,22 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
     this.generatedResults = [];
     this.derivatives = [];
     this.error = null;
-    this.loadError = null;
   }
 
-  copyWord(word: string) {
-    navigator.clipboard.writeText(word);
+  copyWord(word: string): void {
+    navigator.clipboard.writeText(word).then(
+      () => console.log('Mot copié:', word),
+      (err) => console.error('Erreur copie:', err)
+    );
+  }
+
+  copyAllWords(): void {
+    const words = this.generatedResults.map(r => r.word).join('\n');
+    navigator.clipboard.writeText(words);
+  }
+
+  // Vérifier si un mot existe déjà dans les dérivés
+  isExistingWord(word: string): boolean {
+    return this.derivatives.some(d => d.word === word);
   }
 }
