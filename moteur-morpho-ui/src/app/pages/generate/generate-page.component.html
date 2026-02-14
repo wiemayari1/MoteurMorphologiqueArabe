@@ -8,9 +8,10 @@
     </div>
 
     <!-- Erreur de chargement -->
-    <div class="error-message" *ngIf="error && !loadingData">
+    <!-- Erreur de chargement -->
+    <div class="error-message" *ngIf="(error || loadError) && !loadingData">
       <mat-icon>error</mat-icon>
-      {{ error }}
+      {{ error || loadError }}
       <button mat-button (click)="loadData()">إعادة المحاولة</button>
     </div>
 
