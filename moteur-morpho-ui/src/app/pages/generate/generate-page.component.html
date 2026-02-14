@@ -1,7 +1,7 @@
 <app-page-shell [showFooterImage]="true">
   <mat-card class="generate-card">
 
-    <!-- Chargement des données -->
+    <!-- Chargement -->
     <div class="loading-data" *ngIf="loadingData">
       <mat-spinner diameter="40"></mat-spinner>
       <p>جاري تحميل البيانات...</p>
@@ -10,28 +10,26 @@
     <!-- Erreur de chargement -->
     <div class="error-message" *ngIf="loadError && !loadingData">
       <mat-icon>error</mat-icon>
-      {{ loadError }}
-      <button mat-button (click)="loadData()">إعادة المحاولة</button>
+      <span>{{ loadError }}</span>
+      <button mat-button (click)="loadInitialData()">إعادة المحاولة</button>
     </div>
 
     <!-- Formulaire -->
     <div class="form-section" *ngIf="!loadingData">
-
-      <!-- Sélection du Jadhr -->
+      
+      <!-- Racine -->
       <div class="input-group">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>اختر الجذر</mat-label>
           <mat-select [(ngModel)]="selectedRoot" (ngModelChange)="onRootChange()">
             <mat-option value="">-- اختر جذراً --</mat-option>
-            <mat-option *ngFor="let r of roots" [value]="r">
-              {{ r }}
-            </mat-option>
+            <mat-option *ngFor="let r of roots" [value]="r">{{ r }}</mat-option>
           </mat-select>
           <mat-icon matSuffix>format_size</mat-icon>
         </mat-form-field>
       </div>
 
-      <!-- Sélection du Wazn (multi-select) -->
+      <!-- Schèmes (multi-select) -->
       <div class="input-group">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>اختر الأوزان (يمكنك اختيار أكثر من واحد)</mat-label>
@@ -58,62 +56,70 @@
         </mat-form-field>
       </div>
 
-      <!-- Boutons d'action -->
+      <!-- Erreur -->
+      <div class="error-message" *ngIf="error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+
+      <!-- Actions -->
       <div class="actions">
         <button mat-raised-button color="primary" (click)="generate()" [disabled]="!canGenerate" class="generate-btn">
           <mat-icon *ngIf="!loading">auto_fix_high</mat-icon>
-          <mat-icon *ngIf="loading" class="spin">refresh</mat-icon>
+          <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
           {{ loading ? 'جاري التوليد...' : 'توليد' }}
+        </button>
+        
+        <button mat-stroked-button (click)="reset()" *ngIf="generatedResults.length > 0">
+          <mat-icon>clear</mat-icon>
+          مسح
         </button>
       </div>
     </div>
 
-    <!-- Résultats : Présentation claire (racine, schème, mot généré) -->
-    <div class="result-section" *ngIf="generatedResults.length > 0 || error">
-
-      <!-- Succès : Affichage structuré racine + schème + mot -->
-      <div class="success-result" *ngIf="generatedResults.length > 0; else errorResult">
-        <div class="words-container">
-          <div class="generated-word-card" *ngFor="let result of generatedResults">
-            <!-- Mot généré (grand) -->
-            <div class="generated-word">{{ result.word }}</div>
-            
-            <!-- Détails : racine et schème -->
-            <div class="word-details">
-              <mat-chip-set>
-                <mat-chip color="primary" highlighted>
-                  <mat-icon matChipAvatar>format_size</mat-icon>
-                  الجذر: {{ result.root }}
-                </mat-chip>
-                <mat-chip color="accent" highlighted [matTooltip]="result.schemeTemplate">
-                  <mat-icon matChipAvatar>format_shapes</mat-icon>
-                  {{ result.schemeName }}
-                </mat-chip>
-              </mat-chip-set>
-            </div>
+    <!-- Résultats : Présentation claire (racine, schème, mot) -->
+    <div class="result-section" *ngIf="generatedResults.length > 0">
+      <h3>الكلمات المولدة</h3>
+      
+      <div class="words-container">
+        <div class="generated-word-card" *ngFor="let result of generatedResults">
+          <!-- Mot généré -->
+          <div class="generated-word">{{ result.word }}</div>
+          
+          <!-- Détails structurés -->
+          <div class="word-meta">
+            <span class="meta-item root">
+              <mat-icon>format_size</mat-icon>
+              الجذر: <strong>{{ result.root }}</strong>
+            </span>
+            <span class="meta-item scheme" [matTooltip]="result.schemeTemplate">
+              <mat-icon>format_shapes</mat-icon>
+              الوزن: <strong>{{ result.schemeName }}</strong>
+            </span>
           </div>
+          
+          <!-- Badge si existe déjà -->
+          <mat-chip-listbox *ngIf="isExistingWord(result.word)">
+            <mat-chip color="accent" selected>موجود في القاموس</mat-chip>
+          </mat-chip-listbox>
         </div>
       </div>
 
-      <!-- Erreur -->
-      <ng-template #errorResult>
-        <div class="error-result" *ngIf="error">
-          <mat-icon class="error-icon">error</mat-icon>
-          <h3>حدث خطأ</h3>
-          <p>{{ error }}</p>
-        </div>
-      </ng-template>
+      <button mat-stroked-button (click)="copyAllWords()" class="copy-all-btn">
+        <mat-icon>content_copy</mat-icon>
+        نسخ جميع الكلمات
+      </button>
     </div>
 
-    <!-- Famille morphologique : tous les dérivés de la même racine -->
-    <div class="derivatives-history" *ngIf="derivatives.length > 0 && !loading">
+    <!-- Famille morphologique -->
+    <div class="derivatives-history" *ngIf="derivatives.length > 0">
       <h3>العائلة الصرفية للجذر "{{ selectedRoot || customRoot }}"</h3>
       <p class="section-desc">جميع المشتقات المخزنة لهذا الجذر</p>
       
       <div class="history-list">
         <div class="history-item" *ngFor="let d of derivatives" [matTooltip]="'الوزن: ' + d.scheme">
           <span class="history-word">{{ d.word }}</span>
-          <span class="history-scheme" *ngIf="d.scheme">({{ d.scheme }})</span>
+          <span class="history-scheme">({{ d.scheme }})</span>
         </div>
       </div>
     </div>
