@@ -7,7 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { PageShellComponent } from '../../shared/page-shell/page-shell.component';
 import { ApiService, GameQuestion } from '../../services/api.service';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-game-page',
@@ -78,6 +78,7 @@ export class GamePageComponent implements OnInit, OnDestroy {
     }, 12000);
 
     this.apiService.getGameQuestion().pipe(
+      timeout(10000),
       takeUntil(this.destroy$)
     ).subscribe({
       next: (res: GameQuestion) => {

@@ -69,7 +69,7 @@ export class GeneratePageComponent implements OnInit {
         this.loadingData = false;
         this.loadError = 'يبدو أن الخادم لا يستجيب. يرجى التأكد من تشغيله.';
       }
-    }, 5000);
+    }, 12000);
   }
 
   onInputChange() {
@@ -96,7 +96,7 @@ export class GeneratePageComponent implements OnInit {
       roots: this.apiService.getRoots(),
       schemes: this.apiService.getSchemes()
     }).pipe(
-      timeout(3000),
+      timeout(10000),
       finalize(() => {
         this.loadingData = false;
       })
