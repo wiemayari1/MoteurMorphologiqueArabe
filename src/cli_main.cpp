@@ -9,11 +9,9 @@
 #include <string>
 #include <vector>
 
-
 #include "AVL.h"
 #include "hash_table.h"
 #include "morpho.h"
-
 
 using std::string;
 using std::u32string;
@@ -304,8 +302,6 @@ static int run_game(AVLTree &tree, HashTable &ht, bool json_output) {
   return 0;
 }
 
-// ... (existing includes)
-
 // Helper to process a single JSON command
 static void process_server_command(AVLTree &tree, HashTable &ht,
                                    const string &json_line) {
@@ -314,9 +310,6 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
   // {"command": "validate", "word": "...", "root": "..."}
   // {"command": "game_question"}
   // {"command": "game_check", "word": "...", "root": "..."}
-
-  // Note: In a real production app, use a proper JSON library.
-  // Here we use basic string search to avoid adding dependencies.
 
   auto get_val = [&](const string &key) -> string {
     string search = "\"" + key + "\":";
@@ -338,11 +331,7 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
 
     if (end >= json_line.length())
       return "";
-
-    // Simple unescape (only basic ones)
-    string val = json_line.substr(start, end - start);
-    // TODO: full unescape if needed
-    return val;
+    return json_line.substr(start, end - start);
   };
 
   string cmd = get_val("command");
@@ -363,8 +352,12 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
 
     try {
       auto word_u32 = apply_template(root_u32, se->templ);
-      std::cout << "{\"ok\":true,\"result\":\""
-                << json_escape(u32_to_utf8(word_u32)) << "\"}\n"
+      // FIXED JSON FORMAT: includes word, root, scheme
+      std::cout << "{\"ok\":true,"
+                << "\"word\":\"" << json_escape(u32_to_utf8(word_u32)) << "\","
+                << "\"root\":\"" << json_escape(root_utf8) << "\","
+                << "\"scheme\":\"" << json_escape(scheme_utf8) << "\""
+                << "}\n"
                 << std::flush;
     } catch (const std::exception &e) {
       std::cout << "{\"ok\":false,\"error\":\"" << json_escape(e.what())
@@ -379,7 +372,7 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
     auto word_u32 = utf8_to_u32(word_utf8);
     auto root_u32 = normalize_ar(utf8_to_u32(root_utf8));
 
-    bool ok = false;
+    bool belongs = false;
     std::vector<u32string> matched;
 
     for (const auto &s : ht.allSchemes()) {
@@ -387,14 +380,19 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
       if (maybe_r) {
         auto rn = normalize_ar(*maybe_r);
         if (rn == root_u32) {
-          ok = true;
+          belongs = true;
           matched.push_back(s.name);
         }
       }
     }
 
-    std::cout << "{\"ok\":" << (ok ? "true" : "false");
-    if (ok) {
+    // FIXED JSON FORMAT: ok is always true, belongs is true/false
+    std::cout << "{\"ok\":true,"
+              << "\"belongs\":" << (belongs ? "true" : "false") << ","
+              << "\"root\":\"" << json_escape(root_utf8) << "\","
+              << "\"word\":\"" << json_escape(word_utf8) << "\"";
+
+    if (belongs) {
       std::cout << ",\"schemes\":[";
       for (size_t i = 0; i < matched.size(); ++i) {
         if (i)
@@ -406,9 +404,6 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
     std::cout << "}\n" << std::flush;
 
   } else if (cmd == "game_question") {
-    // Run game generation logic reuse
-    // ... (reuse logic or extract function)
-    // For brevity re-implementing basic selection
     std::vector<u32string> roots;
     tree.getAllKeys([&](const AVLNode *n) { roots.push_back(n->key); });
     auto schemes = ht.allSchemes();
@@ -423,25 +418,48 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
     std::uniform_int_distribution<size_t> r_dist(0, roots.size() - 1);
     std::uniform_int_distribution<size_t> s_dist(0, schemes.size() - 1);
 
-    // Try to find a valid combination
     for (int i = 0; i < 100; ++i) {
       const auto &r = roots[r_dist(rng)];
       const auto &s = schemes[s_dist(rng)];
       try {
         auto w = apply_template(r, s.templ);
-        // Success
-        // Generate options...
-        // (Simplified for this task: return 1 option for now or copy full
-        // logic) Let's call the run_game function if possible, but it prints to
-        // stdout directly. BETTER: Refactor run_game to return struct or
-        // string, OR capture stdout. For now, let's just do a simple one:
+
+        // Generate options (random words)
+        std::vector<u32string> options;
+        options.push_back(w);
+        while (options.size() < 4) {
+          const auto &r2 = roots[r_dist(rng)];
+          const auto &s2 = schemes[s_dist(rng)];
+          try {
+            auto w2 = apply_template(r2, s2.templ);
+            bool exists = false;
+            for (auto &o : options)
+              if (o == w2)
+                exists = true;
+            if (!exists)
+              options.push_back(w2);
+          } catch (...) {
+          }
+        }
+        std::shuffle(options.begin(), options.end(), rng);
+
+        int correct_idx = -1;
+        for (size_t k = 0; k < options.size(); ++k)
+          if (options[k] == w)
+            correct_idx = k;
+
+        // FIXED JSON FORMAT: ok=true
         std::cout << "{\"ok\":true,"
                   << "\"root\":\"" << json_escape(u32_to_utf8(r)) << "\","
                   << "\"scheme\":\"" << json_escape(u32_to_utf8(s.name))
                   << "\","
-                  << "\"options\":[\"" << json_escape(u32_to_utf8(w))
-                  << "\", \"???\", \"???\", \"???\"],"
-                  << "\"correct_index\":0}\n"
+                  << "\"options\":[";
+        for (size_t k = 0; k < options.size(); ++k) {
+          if (k)
+            std::cout << ",";
+          std::cout << "\"" << json_escape(u32_to_utf8(options[k])) << "\"";
+        }
+        std::cout << "],\"correct_index\":" << correct_idx << "}\n"
                   << std::flush;
         return;
       } catch (...) {
@@ -456,7 +474,6 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
 }
 
 int main(int argc, char **argv) {
-  // Check for server mode flag manually first
   bool server_mode = false;
   for (int i = 1; i < argc; ++i) {
     if (string(argv[i]) == "--server")
@@ -471,9 +488,6 @@ int main(int argc, char **argv) {
       return 2;
     }
   } else {
-    // In server mode, we still need data paths
-    // Assume usage: ./engine --data ... --schemes ... --server
-    // Parse args but ignore missing command
     for (int i = 1; i < argc; ++i) {
       string arg = argv[i];
       if (arg == "--data") {
@@ -522,9 +536,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  // ... (rest of original main for non-server mode)
   if (a.do_generate) {
-    // ... (existing generation logic)
     auto root_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
     auto scheme_name_u32 = utf8_to_u32(a.scheme_name_utf8);
 
