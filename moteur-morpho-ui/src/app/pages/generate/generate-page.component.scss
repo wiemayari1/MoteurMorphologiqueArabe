@@ -44,6 +44,10 @@
   border-radius: var(--radius-sm);
   margin-bottom: var(--spacing-md);
   border: 1px solid var(--color-error-border);
+  
+  button {
+    margin-right: auto;
+  }
 }
 
 /* Formulaire */
@@ -104,21 +108,27 @@
 .result-section {
   margin-top: var(--spacing-xl);
   padding: var(--spacing-lg);
-  // background: var(--color-gray-50); // Cleaner background
   border-top: 1px solid var(--color-gray-200);
+  
+  h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--color-primary-dark);
+    text-align: center;
+    font-size: var(--font-size-xl);
+  }
 }
 
 .words-container {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   padding: var(--spacing-md) 0;
 }
 
+/* Ancien style (pour compatibilité si utilisé ailleurs) */
 .generated-word {
   font-size: 3rem;
-  /* Very large font */
   font-weight: var(--font-weight-black);
   color: var(--color-primary-dark);
   text-align: center;
@@ -127,19 +137,112 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   animation: fadeIn var(--transition-normal);
-  // border: 1px solid var(--color-primary-light);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* NOUVEAU: Carte de résultat avec racine + schème + mot */
+.generated-word-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl);
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--color-primary-light);
+  min-width: 240px;
+  max-width: 300px;
+  animation: fadeIn 0.3s ease-in;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
   }
+  
+  .generated-word {
+    font-size: 2.5rem;
+    font-weight: var(--font-weight-black);
+    color: var(--color-primary-dark);
+    text-align: center;
+    padding: var(--spacing-sm) 0;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    animation: none;
+  }
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
+.word-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: center;
+  width: 100%;
+  padding-top: var(--spacing-sm);
+  border-top: 1px dashed var(--color-gray-300);
+  
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    direction: rtl;
+    
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: inherit;
+    }
+    
+    strong {
+      color: var(--color-text-primary);
+      margin-right: var(--spacing-xs);
+    }
+    
+    &.root {
+      color: var(--color-primary);
+      
+      strong {
+        color: var(--color-primary-dark);
+      }
+    }
+    
+    &.scheme {
+      color: var(--color-accent);
+      
+      strong {
+        color: var(--color-accent-dark);
+      }
+    }
   }
+}
+
+/* Badges et chips */
+mat-chip-listbox {
+  margin-top: var(--spacing-sm);
+}
+
+/* Bouton copier tout */
+.copy-all-btn {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  margin-left: auto;
+  margin-right: auto;
+  
+  mat-icon {
+    margin-left: var(--spacing-sm);
+  }
+}
+
+/* Section description */
+.section-desc {
+  text-align: center;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-sm);
 }
 
 /* Erreur */
@@ -165,7 +268,6 @@
   }
 }
 
-
 /* Historique des Dérivés */
 .derivatives-history {
   margin-top: var(--spacing-2xl);
@@ -173,9 +275,10 @@
   border-top: 1px dashed var(--color-gray-300);
 
   h3 {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
     color: var(--color-text-secondary);
     font-size: var(--font-size-lg);
+    text-align: right;
   }
 }
 
@@ -193,6 +296,12 @@
   background: var(--color-gray-100);
   border-radius: var(--radius-full);
   border: 1px solid var(--color-gray-300);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background: var(--color-gray-200);
+  }
 
   .history-word {
     font-weight: var(--font-weight-bold);
@@ -202,6 +311,18 @@
   .history-scheme {
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
+  }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -223,77 +344,16 @@
     padding: var(--spacing-md);
   }
 
-  .generated-word {
-    font-size: 2rem;
-  }
-  /* Carte de résultat avec racine + schème + mot */
-.generated-word-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  border: 2px solid var(--color-primary-light);
-  min-width: 220px;
-  animation: fadeIn 0.3s ease-in;
-}
-
-.word-meta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  align-items: center;
-  
-  .meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
+  .generated-word-card {
+    min-width: 100%;
+    max-width: 100%;
     
-    mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-    }
-    
-    strong {
-      color: var(--color-text-primary);
-    }
-    
-    &.root {
-      color: var(--color-primary);
-    }
-    
-    &.scheme {
-      color: var(--color-accent);
+    .generated-word {
+      font-size: 2rem;
     }
   }
-}
 
-h3 {
-  margin-bottom: var(--spacing-md);
-  color: var(--color-primary-dark);
-  text-align: center;
+  .words-container {
+    gap: var(--spacing-md);
+  }
 }
-
-.copy-all-btn {
-  margin-top: var(--spacing-lg);
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.section-desc {
-  text-align: center;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-md);
-  font-size: var(--font-size-sm);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
