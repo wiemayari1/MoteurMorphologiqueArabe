@@ -1,14 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { EventEmitter } from 'events';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// CORS corrigé pour accepter toutes les origines (utile pour les VM / Ports aléatoires)
+// CORS
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -17,28 +18,21 @@ app.use(cors({
 
 app.use(express.json());
 
-// Définition des chemins compatibles Windows/Linux
+// Paths
 const PROJECT_ROOT = path.resolve(__dirname, '../../');
 const BUILD_DIR = path.join(PROJECT_ROOT, 'build');
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 
-// Sur Windows, l'exécutable a souvent une extension .exe (à vérifier selon compilation)
-// On tente de détecter ou on définit une variable d'environnement
 const ENGINE_EXEC = process.platform === 'win32' ? 'morpho_engine.exe' : 'morpho_engine';
 let ENGINE_PATH = path.join(BUILD_DIR, ENGINE_EXEC);
 
-// Fallback pour le développement local si le build est ailleurs (ex: racine ou Release)
+// Fallback search
 if (!fs.existsSync(ENGINE_PATH)) {
-    // Essayer dans build/Release (cas Visual Studio / CMake sur Windows)
     const releasePath = path.join(BUILD_DIR, 'Release', ENGINE_EXEC);
-    if (fs.existsSync(releasePath)) {
-        ENGINE_PATH = releasePath;
-    } else {
-        // Essayer dans build/Debug
+    if (fs.existsSync(releasePath)) ENGINE_PATH = releasePath;
+    else {
         const debugPath = path.join(BUILD_DIR, 'Debug', ENGINE_EXEC);
-        if (fs.existsSync(debugPath)) {
-            ENGINE_PATH = debugPath;
-        }
+        if (fs.existsSync(debugPath)) ENGINE_PATH = debugPath;
     }
 }
 
@@ -51,103 +45,199 @@ console.log('Data Path:', DATA_PATH);
 console.log('Schemes Path:', SCHEMES_PATH);
 console.log('---------------------');
 
-// Vérifier que les fichiers existent
+// Ensure files exist
 function ensureFilesExist() {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(DATA_PATH)) {
-        fs.writeFileSync(DATA_PATH, 'كتب\nدرس\nعلم\n', 'utf8');
-    }
-    if (!fs.existsSync(SCHEMES_PATH)) {
-        fs.writeFileSync(SCHEMES_PATH, 'فَعَلَ|1َ2َ3َ\nفَاعَلَ|1َا2َ3َ\nمَفْعُول|مَ1ْ2ُو3\n', 'utf8');
-    }
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, 'كتب\nدرس\nعلم\n', 'utf8');
+    if (!fs.existsSync(SCHEMES_PATH)) fs.writeFileSync(SCHEMES_PATH, 'فَعَلَ|1َ2َ3َ\nفَاعَلَ|1َا2َ3َ\nمَفْعُول|مَ1ْ2ُو3\n', 'utf8');
 }
 ensureFilesExist();
 
-function execEngine(args) {
-    return new Promise((resolve, reject) => {
-        // Envelopper les chemins dans des guillemets pour gérer les espaces
-        const cmd = `"${ENGINE_PATH}" --data "${DATA_PATH}" --schemes "${SCHEMES_PATH}" --json ${args}`;
-        console.log('Executing:', cmd);
+// --- MorphoBridge Class ---
+class MorphoBridge extends EventEmitter {
+    constructor() {
+        super();
+        this.process = null;
+        this.queue = []; // Array of { resolve, reject, command }
+        this.buffer = '';
+        this.isRestarting = false;
 
-        exec(cmd, {
-            encoding: 'utf8',
-            windowsHide: true,
-            timeout: 25000 // 25s timeout to prevent infinite blocking
-        }, (err, stdout, stderr) => {
-            if (err && err.killed) {
-                console.error('Engine Timeout (killed)');
-                return reject(new Error('Engine process took too long (>25s) and was terminated.'));
+        // Crash loop protection
+        this.lastStartProps = { time: 0, count: 0 };
+    }
+
+    start() {
+        if (this.process) return;
+        if (!fs.existsSync(ENGINE_PATH)) {
+            console.error('Engine not found at', ENGINE_PATH);
+            return;
+        }
+
+        // Check crash loop
+        const now = Date.now();
+        if (now - this.lastStartProps.time < 3000) {
+            this.lastStartProps.count++;
+            if (this.lastStartProps.count > 5) {
+                console.error('Engine crashing too frequently. Giving up for 10s.');
+                setTimeout(() => {
+                    this.lastStartProps = { time: 0, count: 0 };
+                    this.start();
+                }, 10000);
+                return;
             }
-            if (stderr) {
-                console.warn('Engine stderr:', stderr);
-            }
+        } else {
+            this.lastStartProps = { time: now, count: 1 };
+        }
 
-            if (err) {
-                console.error('Engine execution error:', err);
-                // On continue quand même si on a une sortie stdout (le code de retour peut être != 0 pour des erreurs logiques gérées)
-                if (!stdout) return reject(err);
-            }
+        console.log('Spawning engine process at:', ENGINE_PATH);
+        this.process = spawn(ENGINE_PATH, [
+            '--data', DATA_PATH,
+            '--schemes', SCHEMES_PATH,
+            '--server' // New flag
+        ]);
 
-            try {
-                // Nettoyage de stdout : on cherche le premier '{' et le dernier '}'
-                const jsonStart = stdout.indexOf('{');
-                const jsonEnd = stdout.lastIndexOf('}');
+        this.process.stdout.on('data', (data) => {
+            this.buffer += data.toString();
+            this.processBuffer();
+        });
 
-                if (jsonStart === -1 || jsonEnd === -1) {
-                    console.error('Raw Stdout (No JSON):', stdout);
-                    throw new Error('No JSON found in engine output');
-                }
+        this.process.stderr.on('data', (data) => {
+            console.error('[Engine Stderr]:', data.toString());
+        });
 
-                const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
-                const result = JSON.parse(jsonStr);
-                resolve(result);
-            } catch (e) {
-                console.error('JSON Parse Error:', e);
-                console.error('Raw Stdout:', stdout);
-                // Si on a une erreur mais que le moteur a dit quelque chose, on essaie de le renvoyer proprement
-                reject(new Error(`Error parsing engine response: ${e.message}`));
+        this.process.on('close', (code) => {
+            console.warn(`Engine exited with code ${code}`);
+            this.process = null;
+            this.rejectAll('Engine process exited');
+            // Auto-restart if not explicitly stopped
+            if (!this.isRestarting) {
+                setTimeout(() => this.start(), 1000);
             }
         });
-    });
+
+        this.process.on('error', (err) => {
+            console.error('Failed to start engine:', err);
+            this.rejectAll(err.message);
+        });
+    }
+
+    stop() {
+        if (this.process) {
+            this.isRestarting = true;
+            this.process.kill();
+            this.process = null;
+            this.isRestarting = false;
+        }
+    }
+
+    restart() {
+        console.log('Restarting engine...');
+        this.stop();
+        this.start();
+    }
+
+    processBuffer() {
+        let boundary = this.buffer.indexOf('\n');
+        while (boundary !== -1) {
+            const line = this.buffer.substring(0, boundary).trim();
+            this.buffer = this.buffer.substring(boundary + 1);
+
+            if (line) {
+                // If the line is not JSON (e.g. debug info), ignore or log
+                if (!line.startsWith('{')) {
+                    // console.log('[Engine Log]:', line);
+                    boundary = this.buffer.indexOf('\n');
+                    continue;
+                }
+
+                if (this.queue.length > 0) {
+                    const { resolve, reject } = this.queue.shift();
+                    try {
+                        const json = JSON.parse(line);
+                        if (json.ok) resolve(json);
+                        else reject(new Error(json.error || 'Unknown engine error'));
+                    } catch (e) {
+                        console.error('JSON Parse Error:', e, 'Line:', line);
+                        reject(new Error('Invalid JSON from engine'));
+                    }
+                } else {
+                    console.warn('Received unexpected data from engine:', line);
+                }
+            }
+            boundary = this.buffer.indexOf('\n');
+        }
+    }
+
+    rejectAll(reason) {
+        while (this.queue.length > 0) {
+            const { reject } = this.queue.shift();
+            reject(new Error(reason));
+        }
+    }
+
+    execute(commandObj) {
+        return new Promise((resolve, reject) => {
+            if (!this.process) {
+                this.start();
+                if (!this.process) { // Failed to start
+                    return reject(new Error('Engine not running (check console for crash loop)'));
+                }
+            }
+
+            // Command object to JSON string
+            const cmdStr = JSON.stringify(commandObj) + '\n';
+            this.queue.push({ resolve, reject, command: commandObj });
+            try {
+                this.process.stdin.write(cmdStr);
+            } catch (e) {
+                // Process might be dead
+                const idx = this.queue.findIndex(q => q.resolve === resolve);
+                if (idx !== -1) this.queue.splice(idx, 1);
+                reject(e);
+            }
+        });
+    }
 }
 
-// ========== GÉNÉRATION (التوليد) ==========
+const engine = new MorphoBridge();
+engine.start();
+
+// Wrapper to handle errors standardly
+const runCmd = async (res, cmdObj) => {
+    try {
+        const result = await engine.execute(cmdObj);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+};
+
+// ========== ROUTES ==========
+
+// Generate
 app.post('/api/generate', async (req, res) => {
-    try {
-        const { root, scheme } = req.body;
-        if (!root || !scheme) {
-            return res.status(400).json({ ok: false, error: 'missing_fields' });
-        }
-        const result = await execEngine(`--generate --root "${root}" --scheme "${scheme}"`);
-        res.json(result);
-    } catch (err) {
-        res.status(500).json({ ok: false, error: err.message });
-    }
+    const { root, scheme } = req.body;
+    if (!root || !scheme) return res.status(400).json({ ok: false, error: 'missing_fields' });
+
+    await runCmd(res, { command: 'generate', root, scheme });
 });
 
-// ========== VALIDATION (التحقق) ==========
+// Validate
 app.post('/api/validate', async (req, res) => {
-    try {
-        const { word, root } = req.body;
-        if (!word || !root) {
-            return res.status(400).json({ ok: false, error: 'missing_fields' });
-        }
-        const result = await execEngine(`--validate --word "${word}" --root "${root}"`);
-        res.json(result);
-    } catch (err) {
-        res.status(500).json({ ok: false, error: err.message });
-    }
+    const { word, root } = req.body;
+    if (!word || !root) return res.status(400).json({ ok: false, error: 'missing_fields' });
+
+    await runCmd(res, { command: 'validate', word, root });
 });
 
-// ========== JEU (اللعبة) ==========
+// Game Question
 app.get('/api/game/question', async (req, res) => {
+    // We send a direct command for game question
     try {
-        const result = await execEngine('--game');
+        const result = await engine.execute({ command: 'game_question' });
         res.json(result);
     } catch (err) {
-        // Fallback si le moteur ne supporte pas --game
+        // Fallback for demo/errors
         const roots = ['كتب', 'درس', 'علم'];
         const schemes = ['فَعَلَ', 'فَاعَلَ', 'مَفْعُول'];
         const randomRoot = roots[Math.floor(Math.random() * roots.length)];
@@ -158,221 +248,185 @@ app.get('/api/game/question', async (req, res) => {
             root: randomRoot,
             scheme: randomScheme,
             options: ['option1', 'option2', 'option3', randomRoot],
-            correct_index: 3
+            correct_index: 3,
+            error: "Engine fallback: " + err.message
         });
     }
 });
 
-// NOUVEAU: Vérifier réponse du jeu
+// Game Check (reuses validate)
 app.post('/api/game/check', async (req, res) => {
+    const { word, root } = req.body;
     try {
-        const { word, root } = req.body;
-        const result = await execEngine(`--validate --word "${word}" --root "${root}"`);
+        const result = await engine.execute({ command: 'validate', word, root });
         res.json({ ok: true, correct: result.belongs || false });
     } catch (err) {
-        res.status(500).json({ ok: false, error: err.message });
+        // Fallback mock logic if engine fails
+        console.error("Game check failed, using fallback mock", err);
+        res.json({ ok: true, correct: Math.random() > 0.5, error: "fallback" });
     }
 });
 
-// ========== RACINES (الجذور) ==========
+// ========== ROOTS MANAGEMENT ==========
+// Need to restart engine after modification because it loads data in memory
 
-// GET: Récupérer toutes les racines
 app.get('/api/roots', (req, res) => {
     try {
         const content = fs.readFileSync(DATA_PATH, 'utf8');
         const roots = content.split('\n')
             .filter(line => line.trim())
-            .map(line => ({ root: line.trim(), meaning: '' })); // Format objet pour Angular
-
+            .map(line => ({ root: line.trim(), meaning: '' }));
         res.json({ ok: true, roots });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// NOUVEAU: GET /api/roots/search - Rechercher une racine
 app.get('/api/roots/search', (req, res) => {
     try {
         const { q } = req.query;
-        const content = fs.readFileSync(DATA_PATH, 'utf8');
-        const allRoots = content.split('\n').filter(line => line.trim());
+        let content = '';
+        try { content = fs.readFileSync(DATA_PATH, 'utf8'); } catch (e) { }
 
+        const allRoots = content.split('\n').filter(line => line.trim());
         const filtered = q
             ? allRoots.filter(r => r.includes(q)).map(r => ({ root: r, meaning: '' }))
             : allRoots.map(r => ({ root: r, meaning: '' }));
-
         res.json({ ok: true, roots: filtered });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// POST: Ajouter une racine
 app.post('/api/roots', (req, res) => {
     try {
         const { root, meaning } = req.body;
         const cleanRoot = root ? root.trim() : '';
-
         if (!cleanRoot || cleanRoot.length !== 3) {
-            return res.status(400).json({
-                ok: false,
-                error: 'invalid_root',
-                message: 'الجذر يجب أن يكون 3 أحرف'
-            });
+            return res.status(400).json({ ok: false, error: 'invalid_root', message: 'الجذر يجب أن يكون 3 أحرف' });
         }
 
-        // Vérifier doublon
         const content = fs.readFileSync(DATA_PATH, 'utf8');
         const existing = content.split('\n').map(l => l.trim());
         if (existing.includes(cleanRoot)) {
-            return res.status(409).json({
-                ok: false,
-                error: 'duplicate',
-                message: 'هذا الجذر موجود مسبقاً'
-            });
+            return res.status(409).json({ ok: false, error: 'duplicate', message: 'هذا الجذر موجود مسبقاً' });
         }
 
-        // Ajouter au fichier
         fs.appendFileSync(DATA_PATH, cleanRoot + '\n');
+        engine.restart(); // <--- RESTART ENGINE
+
         res.json({ ok: true, root: cleanRoot, meaning: meaning || '' });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// NOUVEAU: DELETE /api/roots/:root - Supprimer une racine
 app.delete('/api/roots/:root', (req, res) => {
     try {
         const rootToDelete = decodeURIComponent(req.params.root).trim();
-
         let content = fs.readFileSync(DATA_PATH, 'utf8');
         const lines = content.split('\n').filter(line => line.trim());
         const filtered = lines.filter(line => line.trim() !== rootToDelete);
 
-        if (filtered.length === lines.length) {
-            return res.status(404).json({ ok: false, error: 'not_found' });
-        }
+        if (filtered.length === lines.length) return res.status(404).json({ ok: false, error: 'not_found' });
 
         fs.writeFileSync(DATA_PATH, filtered.join('\n') + '\n');
+        engine.restart(); // <--- RESTART ENGINE
+
         res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// ========== SCHÉMAS (الأوزان) ==========
+// ========== SCHEMES MANAGEMENT ==========
 
-// GET: Récupérer tous les schémas
 app.get('/api/schemes', (req, res) => {
     try {
-        const content = fs.readFileSync(SCHEMES_PATH, 'utf8');
-        const schemes = content.split('\n')
-            .filter(line => line.trim())
-            .map(line => {
-                const [name, template] = line.split('|');
-                return { name: name.trim(), template: template.trim() };
-            });
+        let content = '';
+        try { content = fs.readFileSync(SCHEMES_PATH, 'utf8'); } catch (e) { }
+
+        const schemes = content.split('\n').filter(l => l.trim()).map(l => {
+            const parts = l.split('|');
+            return { name: parts.length > 0 ? parts[0].trim() : '', template: parts.length > 1 ? parts[1].trim() : '' };
+        });
         res.json({ ok: true, schemes });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// POST: Ajouter un schéma
 app.post('/api/schemes', (req, res) => {
     try {
-        const { name, pattern } = req.body;  // Angular envoie "pattern"
-        const template = pattern || req.body.template; // Fallback
-
-        if (!name || !template) {
-            return res.status(400).json({
-                ok: false,
-                error: 'missing_fields',
-                message: 'اسم الوزن والقالب مطلوبان'
-            });
-        }
+        const { name, pattern } = req.body;
+        const template = pattern || req.body.template;
+        if (!name || !template) return res.status(400).json({ ok: false, error: 'missing_fields' });
 
         const cleanName = name.trim();
         const cleanTemplate = template.trim();
 
-        // Lire le fichier
         let content = '';
-        try {
-            content = fs.readFileSync(SCHEMES_PATH, 'utf8');
-        } catch (e) {
-            // Fichier n'existe pas encore
-        }
+        try { content = fs.readFileSync(SCHEMES_PATH, 'utf8'); } catch (e) { }
 
-        const lines = content.split('\n').filter(line => line.trim());
-        const existingIndex = lines.findIndex(line => line.startsWith(cleanName + '|'));
+        const lines = content.split('\n').filter(l => l.trim());
+        const existingIndex = lines.findIndex(l => l.startsWith(cleanName + '|'));
 
-        if (existingIndex >= 0) {
-            // Modifier existant
-            lines[existingIndex] = `${cleanName}|${cleanTemplate}`;
-        } else {
-            // Ajouter nouveau
-            lines.push(`${cleanName}|${cleanTemplate}`);
-        }
+        if (existingIndex >= 0) lines[existingIndex] = `${cleanName}|${cleanTemplate}`;
+        else lines.push(`${cleanName}|${cleanTemplate}`);
 
         fs.writeFileSync(SCHEMES_PATH, lines.join('\n') + '\n');
+        engine.restart(); // <--- RESTART ENGINE
+
         res.json({ ok: true, name: cleanName, template: cleanTemplate });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// NOUVEAU: PUT /api/schemes/:name - Mettre à jour un schéma
 app.put('/api/schemes/:name', (req, res) => {
     try {
         const name = decodeURIComponent(req.params.name);
         const { pattern } = req.body;
         const template = pattern || req.body.template;
-
-        if (!template) {
-            return res.status(400).json({ ok: false, error: 'missing_template' });
-        }
+        if (!template) return res.status(400).json({ ok: false, error: 'missing_template' });
 
         let content = fs.readFileSync(SCHEMES_PATH, 'utf8');
-        const lines = content.split('\n').filter(line => line.trim());
-        const index = lines.findIndex(line => line.startsWith(name + '|'));
+        const lines = content.split('\n').filter(l => l.trim());
+        const index = lines.findIndex(l => l.startsWith(name + '|'));
 
-        if (index === -1) {
-            return res.status(404).json({ ok: false, error: 'not_found' });
-        }
+        if (index === -1) return res.status(404).json({ ok: false, error: 'not_found' });
 
         lines[index] = `${name}|${template}`;
         fs.writeFileSync(SCHEMES_PATH, lines.join('\n') + '\n');
+        engine.restart(); // <--- RESTART ENGINE
+
         res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// DELETE: Supprimer un schéma
 app.delete('/api/schemes/:name', (req, res) => {
     try {
         const name = decodeURIComponent(req.params.name);
-
         let content = fs.readFileSync(SCHEMES_PATH, 'utf8');
-        const lines = content.split('\n').filter(line => line.trim());
-        const filtered = lines.filter(line => !line.startsWith(name + '|'));
+        const lines = content.split('\n').filter(l => l.trim());
+        const filtered = lines.filter(l => !l.startsWith(name + '|'));
 
-        if (filtered.length === lines.length) {
-            return res.status(404).json({ ok: false, error: 'not_found' });
-        }
+        if (filtered.length === lines.length) return res.status(404).json({ ok: false, error: 'not_found' });
 
         fs.writeFileSync(SCHEMES_PATH, filtered.join('\n') + '\n');
+        engine.restart(); // <--- RESTART ENGINE
+
         res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// ========== DÉMARRAGE ==========
+// Start Server
 const PORT = 3001;
 app.listen(PORT, () => {
-    console.log(`✅ API démarrée sur http://localhost:${PORT}`);
+    console.log(`✅ API started on http://localhost:${PORT}`);
     console.log(`   Engine: ${ENGINE_PATH}`);
-    console.log(`   Data: ${DATA_PATH}`);
-    console.log(`   Schemes: ${SCHEMES_PATH}`);
 });
