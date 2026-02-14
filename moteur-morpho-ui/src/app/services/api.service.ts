@@ -70,8 +70,8 @@ export interface DerivativesResponse {
   providedIn: 'root'
 })
 export class ApiService {
-  // On utilise un chemin relatif pour être compatible avec un proxy ou différents ports
-  private apiUrl = '/api';
+  // On utilise l'URL absolue pour éviter les problèmes de proxy en dev
+  private apiUrl = 'http://localhost:3001/api';
 
   constructor(private http: HttpClient) { }
 

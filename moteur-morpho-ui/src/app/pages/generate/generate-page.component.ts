@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, forkJoin, timeout } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin, timeout, finalize } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -89,11 +89,12 @@ export class GeneratePageComponent implements OnInit {
       roots: this.apiService.getRoots(),
       schemes: this.apiService.getSchemes()
     }).pipe(
-      timeout(5000)
+      timeout(3000),
+      finalize(() => {
+        this.loadingData = false;
+      })
     ).subscribe({
       next: (results: any) => {
-        this.loadingData = false;
-
         // Process Roots
         const rootsResponse = results.roots;
         let rootItems: any[] = [];
@@ -127,7 +128,6 @@ export class GeneratePageComponent implements OnInit {
         }
       },
       error: (err) => {
-        this.loadingData = false;
         this.loadError = 'فشل تحميل البيانات. يرجى التأكد من تشغيل الخادم.';
         console.warn('Error loading data', err);
       }
