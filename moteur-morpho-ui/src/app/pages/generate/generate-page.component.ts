@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin, timeout } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -88,7 +88,9 @@ export class GeneratePageComponent implements OnInit {
     forkJoin({
       roots: this.apiService.getRoots(),
       schemes: this.apiService.getSchemes()
-    }).subscribe({
+    }).pipe(
+      timeout(5000)
+    ).subscribe({
       next: (results: any) => {
         this.loadingData = false;
 
