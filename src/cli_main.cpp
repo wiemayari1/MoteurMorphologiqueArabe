@@ -352,6 +352,13 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
 
     try {
       auto word_u32 = apply_template(root_u32, se->templ);
+
+      // SPEC COMPLIANCE: Update AVL Tree with derived word
+      if (tree.contains(root_u32)) {
+        tree.addDerived(root_u32, word_u32);
+        tree.incrementFrequency(root_u32);
+      }
+
       // FIXED JSON FORMAT: includes word, root, scheme
       std::cout << "{\"ok\":true,"
                 << "\"word\":\"" << json_escape(u32_to_utf8(word_u32)) << "\","
@@ -383,6 +390,14 @@ static void process_server_command(AVLTree &tree, HashTable &ht,
           belongs = true;
           matched.push_back(s.name);
         }
+      }
+    }
+
+    // SPEC COMPLIANCE: Update AVL Tree if validated
+    if (belongs) {
+      if (tree.contains(root_u32)) {
+        tree.addDerived(root_u32, word_u32);
+        tree.incrementFrequency(root_u32);
       }
     }
 
