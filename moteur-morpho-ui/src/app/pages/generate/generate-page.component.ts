@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, forkJoin, timeout, finalize, takeUntil } from 'rxjs';
+import { Subject, debounceTime, forkJoin, timeout, finalize, takeUntil, catchError, of } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -14,7 +14,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { PageShellComponent } from '../../shared/page-shell/page-shell.component';
 import { ApiService, SchemeItem, DerivativeItem } from '../../services/api.service';
 
-// Interface pour présenter clairement les résultats (racine, schème, mot)
 export interface GeneratedResult {
   word: string;
   root: string;
@@ -47,14 +46,10 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
 
   selectedRoot: string = '';
   selectedSchemes: SchemeItem[] = [];
-
   customRoot: string = '';
   customScheme: string = '';
 
-  // Résultats enrichis avec racine, schème et mot
   generatedResults: GeneratedResult[] = [];
-  
-  // Famille morphologique complète (tous les dérivés de la même racine)
   derivatives: DerivativeItem[] = [];
 
   loading = false;
@@ -79,12 +74,13 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadData();
     
+    // Timeout de sécurité plus long (10s)
     setTimeout(() => {
       if (this.loadingData) {
         this.loadingData = false;
-        this.loadError = 'يبدو أن الخادم لا يستجيب. يرجى التأكد من تشغيله.';
+        this.loadError = 'انتهت مهلة الاتصال بالخادم. تأكد من تشغيل: node src/server.js على المنفذ 3001';
       }
-    }, 5000);
+    }, 10000);
   }
 
   ngOnDestroy() {
@@ -107,59 +103,66 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
     this.loadError = null;
     this.error = null;
 
+    console.log('Chargement des données depuis l\'API...');
+
     forkJoin({
-      roots: this.apiService.getRoots(),
-      schemes: this.apiService.getSchemes()
+      roots: this.apiService.getRoots().pipe(
+        timeout(8000),
+        catchError(err => {
+          console.error('Erreur roots:', err);
+          return of({ ok: false, roots: [] });
+        })
+      ),
+      schemes: this.apiService.getSchemes().pipe(
+        timeout(8000),
+        catchError(err => {
+          console.error('Erreur schemes:', err);
+          return of({ ok: false, schemes: [] });
+        })
+      )
     }).pipe(
-      timeout(8000),
       finalize(() => {
         this.loadingData = false;
       })
     ).subscribe({
       next: (results) => {
-        // Traitement des racines
-        const rootsResponse = results.roots as any;
-        let rootItems: any[] = [];
-        
-        if (Array.isArray(rootsResponse)) {
-          rootItems = rootsResponse;
-        } else if (rootsResponse?.roots && Array.isArray(rootsResponse.roots)) {
-          rootItems = rootsResponse.roots;
-        }
+        console.log('Réponse roots:', results.roots);
+        console.log('Réponse schemes:', results.schemes);
 
-        this.roots = rootItems
-          .map((item: any) => {
-            if (typeof item === 'string') return item.trim();
-            if (item && typeof item === 'object') {
-              return (item.root || '').trim();
-            }
-            return '';
-          })
-          .filter((r: string) => r.length > 0)
-          .sort((a: string, b: string) => a.localeCompare(b, 'ar'));
+        // Traitement des racines
+        if (results.roots.ok && Array.isArray(results.roots.roots)) {
+          this.roots = results.roots.roots
+            .map((item: any) => {
+              if (typeof item === 'string') return item.trim();
+              if (item && typeof item === 'object') return (item.root || '').trim();
+              return '';
+            })
+            .filter((r: string) => r.length > 0)
+            .sort((a: string, b: string) => a.localeCompare(b, 'ar'));
+        } else {
+          this.loadError = 'فشل تحميل الجذور من الخادم';
+        }
 
         // Traitement des schèmes
-        const schemesResponse = results.schemes as any;
-        let schemeItems: any[] = [];
-        
-        if (Array.isArray(schemesResponse)) {
-          schemeItems = schemesResponse;
-        } else if (schemesResponse?.schemes && Array.isArray(schemesResponse.schemes)) {
-          schemeItems = schemesResponse.schemes;
+        if (results.schemes.ok && Array.isArray(results.schemes.schemes)) {
+          this.schemes = results.schemes.schemes.map((item: any) => ({
+            name: item.name || 'وزن غير معروف',
+            template: item.template || item.pattern || '؟؟؟',
+            pattern: item.pattern || item.template || '؟؟؟'
+          }));
+        } else {
+          this.loadError = 'فشل تحميل الأوزان من الخادم';
         }
 
-        this.schemes = schemeItems.map((item: any) => {
-          const obj = item && typeof item === 'object' ? item : {};
-          return {
-            name: obj.name ?? 'وزن غير معروف',
-            template: obj.template ?? obj.pattern ?? '؟؟؟',
-            pattern: obj.pattern ?? obj.template ?? '؟؟؟'
-          };
-        });
+        // Si les deux sont vides, c'est probablement un problème de connexion
+        if (this.roots.length === 0 && this.schemes.length === 0) {
+          this.loadError = 'لا يمكن الاتصال بالخادم. تأكد من تشغيل: node src/server.js';
+        }
       },
       error: (err) => {
-        this.loadError = 'فشل تحميل البيانات. يرجى التأكد من تشغيل الخادم.';
-        console.error('Error loading data:', err);
+        console.error('Erreur forkJoin:', err);
+        this.loadingData = false;
+        this.loadError = 'خطأ في الاتصال: ' + (err.message || 'الخادم غير متاح');
       }
     });
   }
@@ -173,18 +176,16 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
 
     this.apiService.getDerivatives(root).pipe(
       timeout(5000),
-      takeUntil(this.destroy$)
+      takeUntil(this.destroy$),
+      catchError(err => {
+        console.error('Erreur derivatives:', err);
+        return of({ ok: false, derivatives: [] });
+      })
     ).subscribe({
       next: (res) => {
         if (res.ok) {
           this.derivatives = res.derivatives || [];
-        } else {
-          this.derivatives = [];
         }
-      },
-      error: (err) => {
-        console.warn('Error loading derivatives:', err);
-        this.derivatives = [];
       }
     });
   }
@@ -198,9 +199,7 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
   generate() {
     const root = (this.selectedRoot || this.customRoot).trim();
 
-    // Préparer les schèmes à traiter
     let schemesToProcess: { template: string; name: string }[] = [];
-
     this.selectedSchemes.forEach(s => {
       schemesToProcess.push({ template: s.template, name: s.name });
     });
@@ -233,7 +232,11 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
 
     const requests = schemesToProcess.map(s =>
       this.apiService.generate({ root, scheme: s.template }).pipe(
-        timeout(10000)
+        timeout(15000), // Timeout augmenté pour l'engine C++
+        catchError(err => {
+          console.error(`Erreur génération pour ${s.name}:`, err);
+          return of({ ok: false, error: err.message });
+        })
       )
     );
 
@@ -260,14 +263,15 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
 
         if (results.length === 0) {
           this.error = 'فشل التوليد لجميع الأوزان المختارة';
+        } else if (results.length < schemesToProcess.length) {
+          this.error = `تم توليد ${results.length} من ${schemesToProcess.length} كلمات فقط`;
         }
 
-        // Recharger la famille morphologique
         this.loadDerivatives();
       },
       error: (err) => {
         this.loading = false;
-        this.error = 'خطأ في الاتصال بالخادم';
+        this.error = 'خطأ في الاتصال بالخادم: ' + err.message;
         console.error('Generation error:', err);
       }
     });
@@ -284,7 +288,6 @@ export class GeneratePageComponent implements OnInit, OnDestroy {
     this.loadError = null;
   }
 
-  // Copier un mot spécifique
   copyWord(word: string) {
     navigator.clipboard.writeText(word);
   }
