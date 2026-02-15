@@ -4,6 +4,11 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <map>
+
+// Vérification si une chaîne contient uniquement des caractères arabes
+bool isValidArabic(const std::u32string& s);
+bool isValidArabicRoot(const std::u32string& s);
 
 // Conversion UTF-8 <-> UTF-32
 std::u32string utf8_to_u32(const std::string& s);
@@ -27,9 +32,23 @@ std::vector<std::u32string> find_schemes_matching(
     const std::u32string& word,
     const std::vector<std::u32string>& templates);
 
-// Mini-jeu : version à 3 paramètres
-void play_minigame(const std::vector<std::u32string>& roots,
-                   const std::vector<std::u32string>& scheme_names,
-                   const std::vector<std::u32string>& scheme_templates);
+// Structure pour une question de jeu
+struct GameQuestion {
+    int id;
+    std::string type; // "find_root", "find_scheme", "validate_word"
+    std::u32string word;
+    std::u32string root;
+    std::u32string scheme_name;
+    std::u32string scheme_template;
+    std::vector<std::u32string> options;
+    std::u32string correct_answer;
+    std::string difficulty;
+};
+
+// Générer une question aléatoire pour le jeu
+GameQuestion generate_game_question(
+    const std::vector<std::u32string>& roots,
+    const std::vector<std::u32string>& scheme_names,
+    const std::vector<std::u32string>& scheme_templates);
 
 #endif
