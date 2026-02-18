@@ -8,3 +8,17 @@ moteur-morpho-ui/dist/
 
 # Build C++
 build/
+
+# Node modules
+node_modules/
+
+# Next.js build
+.next/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
