@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
     while (getline(in, line)) {
       if (line.empty())
         continue;
-      auto r_u32 = normalize_ar(utf8_to_u32(line));
+      auto r_u32 = normalize_ar(unicode::utf8_to_u32(line));
       if (r_u32.size() == 3) {
         tree.insert(r_u32);
       } else {
@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
       string name = line.substr(0, pos);
       string templ = line.substr(pos + 1);
 
-      auto name_u32 = utf8_to_u32(name);
-      auto templ_u32 = utf8_to_u32(templ);
+      auto name_u32 = unicode::utf8_to_u32(name);
+      auto templ_u32 = unicode::utf8_to_u32(templ);
       ht.put(name_u32, templ_u32);
     }
   }
@@ -134,8 +134,8 @@ int main(int argc, char **argv) {
       cout << "Entrer le nom du schème (par ex. مفعول, فاعل, ...) : ";
       getline(cin, sname_utf8);
 
-      auto r_u32 = normalize_ar(utf8_to_u32(r_utf8));
-      auto sname = utf8_to_u32(sname_utf8);
+      auto r_u32 = normalize_ar(unicode::utf8_to_u32(r_utf8));
+      auto sname = unicode::utf8_to_u32(sname_utf8);
 
       SchemeEntry *se = ht.get(sname);
       if (!se) {
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
       } else {
         try {
           auto word = apply_template(r_u32, se->templ);
-          cout << "Mot généré : \033[1;32m" << u32_to_utf8(word) << "\033[0m\n";
+          cout << "Mot généré : \033[1;32m" << unicode::u32_to_utf8(word) << "\033[0m\n";
 
           // Mise à jour des dérivés + fréquence
           if (tree.contains(r_u32)) {
@@ -166,8 +166,8 @@ int main(int argc, char **argv) {
       cout << "Entrer la racine candidate : ";
       getline(cin, r_utf8);
 
-      auto w_u32 = utf8_to_u32(w_utf8);
-      auto r_u32 = normalize_ar(utf8_to_u32(r_utf8));
+      auto w_u32 = unicode::utf8_to_u32(w_utf8);
+      auto r_u32 = normalize_ar(unicode::utf8_to_u32(r_utf8));
 
       vector<u32string> matching_schemes;
       bool appartient = false;
@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
                 "racine donnée.\n";
         cout << "Schème(s) reconnu(s) : ";
         for (auto &n : matching_schemes) {
-          cout << "\033[1;36m" << u32_to_utf8(n) << "\033[0m ";
+          cout << "\033[1;36m" << unicode::u32_to_utf8(n) << "\033[0m ";
         }
         cout << "\n";
       }
@@ -205,8 +205,8 @@ int main(int argc, char **argv) {
       // === Lister les schèmes ===
       cout << "\033[1;33m[ Liste des schèmes ]\033[0m\n\n";
       for (const auto &s : ht.allSchemes()) {
-        cout << " - Nom : \033[1;32m" << u32_to_utf8(s.name) << "\033[0m"
-             << " | Template : \033[1;36m" << u32_to_utf8(s.templ)
+        cout << " - Nom : \033[1;32m" << unicode::u32_to_utf8(s.name) << "\033[0m"
+             << " | Template : \033[1;36m" << unicode::u32_to_utf8(s.templ)
              << "\033[0m\n";
       }
 
@@ -214,12 +214,12 @@ int main(int argc, char **argv) {
       // === Lister les racines et leurs dérivés ===
       cout << "\033[1;33m[ Racines et dérivés ]\033[0m\n\n";
       tree.forEach([](const AVLNode *n) {
-        cout << " * Racine : \033[1;32m" << u32_to_utf8(n->key) << "\033[0m"
+        cout << " * Racine : \033[1;32m" << unicode::u32_to_utf8(n->key) << "\033[0m"
              << " (freq=" << n->frequency << ")\n";
         if (!n->derived.empty()) {
           cout << "   Dérivés : ";
           for (const auto &d : n->derived) {
-            cout << "\033[1;36m" << u32_to_utf8(d) << "\033[0m ";
+            cout << "\033[1;36m" << unicode::u32_to_utf8(d) << "\033[0m ";
           }
           cout << "\n";
         }
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
       cout << "Entrer la nouvelle racine (trilitère, en arabe) : ";
       getline(cin, r_utf8);
 
-      auto r_u32 = normalize_ar(utf8_to_u32(r_utf8));
+      auto r_u32 = normalize_ar(unicode::utf8_to_u32(r_utf8));
       if (r_u32.size() != 3) {
         cout << "\033[1;31mRacine invalide (après normalisation, doit avoir 3 "
                 "lettres).\033[0m\n";
@@ -272,8 +272,8 @@ int main(int argc, char **argv) {
       cout << "Entrer le template (ex: مفعول avec ف,ع,ل) : ";
       getline(cin, templ_utf8);
 
-      auto name_u32 = utf8_to_u32(name_utf8);
-      auto templ_u32 = utf8_to_u32(templ_utf8);
+      auto name_u32 = unicode::utf8_to_u32(name_utf8);
+      auto templ_u32 = unicode::utf8_to_u32(templ_utf8);
 
       if (name_u32.empty() || templ_u32.empty()) {
         cout << "\033[1;31mNom ou template vide.\033[0m\n";
@@ -289,14 +289,14 @@ int main(int argc, char **argv) {
       cout << "Entrer le nom du schème à modifier : ";
       getline(cin, name_utf8);
 
-      auto name_u32 = utf8_to_u32(name_utf8);
+      auto name_u32 = unicode::utf8_to_u32(name_utf8);
       if (ht.get(name_u32) == nullptr) {
         cout << "\033[1;31mSchème introuvable.\033[0m\n";
       } else {
         string templ_utf8;
         cout << "Entrer le nouveau template : ";
         getline(cin, templ_utf8);
-        auto templ_u32 = utf8_to_u32(templ_utf8);
+        auto templ_u32 = unicode::utf8_to_u32(templ_utf8);
 
         ht.put(name_u32, templ_u32);
         cout << "\033[1;32mSchème modifié.\033[0m\n";
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
       cout << "Entrer le nom du schème à supprimer : ";
       getline(cin, name_utf8);
 
-      auto name_u32 = utf8_to_u32(name_utf8);
+      auto name_u32 = unicode::utf8_to_u32(name_utf8);
       if (ht.get(name_u32) == nullptr) {
         cout << "\033[1;31mSchème introuvable.\033[0m\n";
       } else {
@@ -324,7 +324,7 @@ int main(int argc, char **argv) {
       cout << "Entrer la racine à supprimer : ";
       getline(cin, r_utf8);
 
-      auto r_u32 = normalize_ar(utf8_to_u32(r_utf8));
+      auto r_u32 = normalize_ar(unicode::utf8_to_u32(r_utf8));
       if (!tree.contains(r_u32)) {
         cout << "\033[1;31mRacine introuvable.\033[0m\n";
       } else {

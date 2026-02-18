@@ -19,7 +19,7 @@ const features = [
     href: "/game",
     icon: Gamepad2,
     label: "اللعبة التعليمية",
-    description: "اختبر معرفتك الصرفية مع 10 أسئلة عشوائية",
+    description: "اختبر معرفتك الصرفية ",
     color: "bg-rose-100 text-rose-600",
     hoverColor: "group-hover:bg-rose-200",
     badge: "جديد",
@@ -60,25 +60,7 @@ const features = [
 
 export default function HomePage() {
   return (
-    <div className="max-w-5xl mx-auto space-y-12">
-      {/* Hero Section */}
-      <div className="text-center animate-fade-in">
-        <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-800 px-4 py-2 rounded-full text-sm mb-6">
-          <Zap className="w-4 h-4" />
-          <span>نظام متكامل للتحليل الصرفي</span>
-        </div>
-        
-        <h1 className="text-4xl md:text-6xl font-bold text-teal-900 mb-6 font-arabic leading-tight">
-          المحرك الصرفي العربي
-        </h1>
-        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto font-arabic leading-relaxed">
-          منصة متكاملة للتحليل الصرفي للغة العربية باستخدام خوارزميات 
-          <span className="font-bold text-teal-700"> AVL Tree </span> 
-          و 
-          <span className="font-bold text-teal-700"> Hash Table </span>
-        </p>
-      </div>
-
+    <div className="space-y-16">
       {/* Features Grid */}
       <div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
@@ -91,10 +73,12 @@ export default function HomePage() {
                   </Badge>
                 )}
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center h-full">
-                  <div className={`
-                    w-16 h-16 rounded-2xl flex items-center justify-center mb-4
-                    transition-colors duration-300 ${feature.color} ${feature.hoverColor}
-                  `}>
+                  <div
+                    className={`
+                      w-16 h-16 rounded-2xl flex items-center justify-center mb-4
+                      transition-colors duration-300 ${feature.color} ${feature.hoverColor}
+                    `}
+                  >
                     <feature.icon className="w-8 h-8" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-800 mb-2 font-arabic group-hover:text-teal-700 transition-colors">
@@ -110,7 +94,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Poem Section - Ahmad Shawqi */}
+      {/* Poem Section */}
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-teal-600/5 to-purple-600/5 rounded-3xl" />
         <div className="relative glass rounded-2xl p-8 md:p-12 text-center">
@@ -119,7 +103,7 @@ export default function HomePage() {
               <Quote className="w-8 h-8 text-teal-600" />
             </div>
           </div>
-          
+
           <blockquote className="space-y-4 mb-6">
             <p className="text-xl md:text-2xl font-arabic text-teal-900 leading-loose">
               حَقُّ العَشيرَةِ في نُبوغِكَ أَوَّلٌ
@@ -142,58 +126,11 @@ export default function HomePage() {
               جَعَلَ الجَمالَ وَسَرَّهُ في الضادِ
             </p>
           </blockquote>
-          
+
           <div className="flex items-center justify-center gap-2 text-gray-600">
             <div className="h-px w-12 bg-gray-300" />
             <span className="font-arabic text-lg">أحمد شوقي</span>
             <div className="h-px w-12 bg-gray-300" />
-          </div>
-          
-          <p className="mt-4 text-sm text-gray-500 font-arabic">
-            شاعر النيل أمير الشعراء
-          </p>
-        </div>
-      </div>
-
-      {/* Quick Start */}
-      <div className="text-center">
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link href="/generate">
-            <Button size="lg" className="gap-2 text-lg font-arabic">
-              <Sparkles className="w-5 h-5" />
-              تجربة التوليد
-            </Button>
-          </Link>
-          <Link href="/game">
-            <Button size="lg" variant="outline" className="gap-2 text-lg font-arabic">
-              <Gamepad2 className="w-5 h-5" />
-              اختبر نفسك
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Technical Info */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-6 text-white">
-          <h3 className="text-xl font-bold mb-4 font-arabic">شجرة AVL</h3>
-          <p className="text-teal-100 text-sm mb-4 font-arabic">
-            تخزين الجذور العربية في شجرة بحث متوازنة
-          </p>
-          <div className="flex items-center gap-2 text-2xl font-bold">
-            <span>O(log n)</span>
-            <span className="text-sm font-normal text-teal-200">للبحث والإضافة</span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white">
-          <h3 className="text-xl font-bold mb-4 font-arabic">جدول Hash</h3>
-          <p className="text-purple-100 text-sm mb-4 font-arabic">
-            تخزين الأوزان الصرفية مع قواعد التحويل
-          </p>
-          <div className="flex items-center gap-2 text-2xl font-bold">
-            <span>O(1)</span>
-            <span className="text-sm font-normal text-purple-200">للوصول والبحث</span>
           </div>
         </div>
       </div>

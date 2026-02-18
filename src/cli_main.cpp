@@ -1,770 +1,210 @@
-#include <algorithm>
-#include <chrono>
-#include <cstdint>
-#include <fstream>
 #include <iostream>
-#include <optional>
-#include <random>
-#include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 
 #include "AVL.h"
 #include "hash_table.h"
 #include "morpho.h"
+#include "unicode_utils.h"   // <-- contient utf8_to_u32 / u32_to_utf8
 
-using std::string;
-using std::u32string;
+using namespace std;
+using namespace unicode;
+/* ==============================
+   Chargement des données
+================================ */
 
-static string read_file_utf8(const string &path) {
-  std::ifstream f(path, std::ios::binary);
-  if (!f)
-    return "";
-  std::ostringstream ss;
-  ss << f.rdbuf();
-  return ss.str();
-}
-
-static string json_escape(const string &s) {
-  std::string out;
-  out.reserve(s.size() + 8);
-  for (char c : s) {
-    switch (c) {
-    case '\\':
-      out += "\\\\";
-      break;
-    case '"':
-      out += "\\\"";
-      break;
-    case '\n':
-      out += "\\n";
-      break;
-    case '\r':
-      out += "\\r";
-      break;
-    case '\t':
-      out += "\\t";
-      break;
-    default:
-      out += c;
-      break;
-    }
-  }
-  return out;
-}
-
-struct Args {
-  string data_path;
-  string schemes_path;
-
-  bool json = false;
-
-  bool do_generate = false;
-  bool do_validate = false;
-  bool do_game = false;
-  bool do_list_roots = false;
-  bool do_list_schemes = false;
-  bool do_add_root = false;
-
-  string root_utf8;
-  string scheme_name_utf8;
-  string word_utf8;
-  string meaning_utf8; // for adding root
-};
-
-static void print_help(const char *prog) {
-  std::cerr << "Usage:\n"
-            << "  " << prog
-            << " --data data/roots.txt --schemes data/schemes.txt [--json] "
-               "COMMAND\n\n"
-            << "Commands:\n"
-            << "  --generate --root \"كتب\" --scheme \"مفعول\"\n"
-            << "  --validate --word \"مكتوب\" --root \"كتب\"\n"
-            << "  --game\n"
-            << "  --list-roots\n"
-            << "  --list-schemes\n"
-            << "  --add-root --root \"كتب\" [--meaning \"écrire\"]\n\n"
-            << "Options:\n"
-            << "  --json           Output JSON\n"
-            << "  --data <path>    Path to roots file\n"
-            << "  --schemes <path> Path to schemes file\n";
-}
-
-static std::optional<string> get_opt_value(int &i, int argc, char **argv) {
-  if (i + 1 >= argc)
-    return std::nullopt;
-  return string(argv[++i]);
-}
-
-static bool parse_args(int argc, char **argv, Args &a) {
-  for (int i = 1; i < argc; ++i) {
-    string arg = argv[i];
-
-    if (arg == "--help" || arg == "-h") {
-      print_help(argv[0]);
-      return false;
-    } else if (arg == "--json") {
-      a.json = true;
-    } else if (arg == "--data") {
-      auto v = get_opt_value(i, argc, argv);
-      if (!v)
+bool load_roots(const string& file, AVLTree& avl)
+{
+    ifstream in(file);
+    if (!in) {
+        cerr << "Erreur ouverture roots.txt\n";
         return false;
-      a.data_path = *v;
-    } else if (arg == "--schemes") {
-      auto v = get_opt_value(i, argc, argv);
-      if (!v)
-        return false;
-      a.schemes_path = *v;
-    } else if (arg == "--generate") {
-      a.do_generate = true;
-    } else if (arg == "--validate") {
-      a.do_validate = true;
-    } else if (arg == "--game") {
-      a.do_game = true;
-    } else if (arg == "--list-roots") {
-      a.do_list_roots = true;
-    } else if (arg == "--list-schemes") {
-      a.do_list_schemes = true;
-    } else if (arg == "--add-root") {
-      a.do_add_root = true;
-    } else if (arg == "--root") {
-      auto v = get_opt_value(i, argc, argv);
-      if (!v)
-        return false;
-      a.root_utf8 = *v;
-    } else if (arg == "--scheme") {
-      auto v = get_opt_value(i, argc, argv);
-      if (!v)
-        return false;
-      a.scheme_name_utf8 = *v;
-    } else if (arg == "--word") {
-      auto v = get_opt_value(i, argc, argv);
-      if (!v)
-        return false;
-      a.word_utf8 = *v;
-    } else if (arg == "--meaning") {
-      auto v = get_opt_value(i, argc, argv);
-      if (!v)
-        return false;
-      a.meaning_utf8 = *v;
-    } else {
-      std::cerr << "Unknown argument: " << arg << "\n";
-      return false;
-    }
-  }
-
-  if (a.data_path.empty() || a.schemes_path.empty()) {
-    std::cerr << "Missing --data or --schemes\n";
-    return false;
-  }
-
-  int cmd_count = (a.do_generate ? 1 : 0) + (a.do_validate ? 1 : 0) +
-                  (a.do_game ? 1 : 0) + (a.do_list_roots ? 1 : 0) +
-                  (a.do_list_schemes ? 1 : 0) + (a.do_add_root ? 1 : 0);
-  if (cmd_count != 1) {
-    std::cerr << "Choose exactly one command: --generate, --validate, --game, "
-                 "--list-roots, --list-schemes, --add-root\n";
-    return false;
-  }
-
-  if (a.do_generate) {
-    if (a.root_utf8.empty() || a.scheme_name_utf8.empty()) {
-      std::cerr << "Missing --root or --scheme for --generate\n";
-      return false;
-    }
-  }
-  if (a.do_validate) {
-    if (a.word_utf8.empty() || a.root_utf8.empty()) {
-      std::cerr << "Missing --word or --root for --validate\n";
-      return false;
-    }
-  }
-  if (a.do_add_root) {
-    if (a.root_utf8.empty()) {
-      std::cerr << "Missing --root for --add-root\n";
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool load_roots_into_avl(const string &roots_path, AVLTree &tree) {
-  string content = read_file_utf8(roots_path);
-  if (content.empty())
-    return false;
-
-  std::istringstream in(content);
-  string line;
-  while (std::getline(in, line)) {
-    if (line.empty())
-      continue;
-    auto r_u32 = normalize_ar(utf8_to_u32(line));
-    if (r_u32.size() == 3)
-      tree.insert(r_u32);
-  }
-  return true;
-}
-
-static bool load_schemes_into_hash(const string &schemes_path, HashTable &ht) {
-  string content = read_file_utf8(schemes_path);
-  if (content.empty())
-    return false;
-
-  std::istringstream in(content);
-  string line;
-  while (std::getline(in, line)) {
-    if (line.empty())
-      continue;
-    auto pos = line.find('|');
-    if (pos == string::npos)
-      continue;
-    string name = line.substr(0, pos);
-    string templ = line.substr(pos + 1);
-
-    ht.put(utf8_to_u32(name), utf8_to_u32(templ));
-  }
-  return true;
-}
-
-static int run_game(AVLTree &tree, HashTable &ht, bool json_output) {
-  std::vector<u32string> roots;
-  tree.getAllKeys([&](const AVLNode *n) { roots.push_back(n->key); });
-
-  std::vector<SchemeEntry> schemes = ht.allSchemes();
-
-  if (roots.empty() || schemes.empty()) {
-    if (json_output) {
-      std::cout << "{\"ok\":false,\"error\":\"no_data\"}\n";
-    } else {
-      std::cerr << "Erreur: pas assez de données pour le jeu\n";
-    }
-    return 7;
-  }
-
-  std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
-  std::uniform_int_distribution<size_t> root_dist(0, roots.size() - 1);
-  std::uniform_int_distribution<size_t> scheme_dist(0, schemes.size() - 1);
-
-  const u32string &random_root = roots[root_dist(rng)];
-  const SchemeEntry &random_scheme = schemes[scheme_dist(rng)];
-
-  u32string correct_word;
-  try {
-    correct_word = apply_template(random_root, random_scheme.templ);
-  } catch (const std::exception &e) {
-    if (json_output) {
-      std::cout << "{\"ok\":false,\"error\":\"generation_failed\"}\n";
-    } else {
-      std::cerr << "Erreur génération: " << e.what() << "\n";
-    }
-    return 8;
-  }
-
-  std::vector<u32string> options;
-  options.push_back(correct_word);
-
-  int attempts = 0;
-  while (options.size() < 4 && attempts < 100) {
-    attempts++;
-    const u32string &wrong_root = roots[root_dist(rng)];
-    const SchemeEntry &wrong_scheme = schemes[scheme_dist(rng)];
-
-    try {
-      u32string wrong_word = apply_template(wrong_root, wrong_scheme.templ);
-
-      bool exists = false;
-      for (const auto &o : options) {
-        if (o == wrong_word) {
-          exists = true;
-          break;
-        }
-      }
-      if (!exists)
-        options.push_back(wrong_word);
-    } catch (...) {
-      continue;
-    }
-  }
-
-  while (options.size() < 4) {
-    options.push_back(u32string(U"؟؟؟"));
-  }
-
-  std::shuffle(options.begin(), options.end(), rng);
-
-  int correct_index = -1;
-  for (size_t i = 0; i < options.size(); i++) {
-    if (options[i] == correct_word) {
-      correct_index = (int)i;
-      break;
-    }
-  }
-
-  if (json_output) {
-    std::cout << "{\"ok\":true,"
-              << "\"root\":\"" << json_escape(u32_to_utf8(random_root)) << "\","
-              << "\"scheme\":\"" << json_escape(u32_to_utf8(random_scheme.name))
-              << "\","
-              << "\"options\":[";
-    for (size_t i = 0; i < options.size(); i++) {
-      if (i)
-        std::cout << ",";
-      std::cout << "\"" << json_escape(u32_to_utf8(options[i])) << "\"";
-    }
-    std::cout << "],\"correct_index\":" << correct_index << "}\n";
-  } else {
-    std::cout << "Jeu Morphologique\n";
-    std::cout << "=================\n";
-    std::cout << "Racine: " << u32_to_utf8(random_root) << "\n";
-    std::cout << "Schème: " << u32_to_utf8(random_scheme.name) << "\n";
-    std::cout << "Quel est le mot dérivé?\n";
-    for (size_t i = 0; i < options.size(); i++) {
-      std::cout << "  " << (i + 1) << ") " << u32_to_utf8(options[i]) << "\n";
-    }
-    std::cout << "(Réponse correcte: " << (correct_index + 1) << ")\n";
-  }
-
-  return 0;
-}
-
-// Helper to process a single JSON command
-static void process_server_command(AVLTree &tree, HashTable &ht,
-                                   const string &json_line) {
-  // Simple manual JSON parsing for the expected format:
-  // {"command": "generate", "root": "...", "scheme": "..."}
-  // {"command": "validate", "word": "...", "root": "..."}
-  // {"command": "game_question"}
-  // {"command": "game_check", "word": "...", "root": "..."}
-
-  auto get_val = [&](const string &key) -> string {
-    string search = "\"" + key + "\":";
-    size_t pos = json_line.find(search);
-    if (pos == string::npos)
-      return "";
-
-    size_t start = json_line.find("\"", pos + search.length());
-    if (start == string::npos)
-      return "";
-    start++; // skip quote
-
-    size_t end = start;
-    while (end < json_line.length()) {
-      if (json_line[end] == '"' && json_line[end - 1] != '\\')
-        break;
-      end++;
     }
 
-    if (end >= json_line.length())
-      return "";
-    return json_line.substr(start, end - start);
-  };
-
-  string cmd = get_val("command");
-
-  if (cmd == "generate") {
-    string root_utf8 = get_val("root");
-    string scheme_utf8 = get_val("scheme");
-
-    auto root_u32 = normalize_ar(utf8_to_u32(root_utf8));
-    auto scheme_name_u32 = utf8_to_u32(scheme_utf8);
-
-    SchemeEntry *se = ht.get(scheme_name_u32);
-    if (!se) {
-      std::cout << "{\"ok\":false,\"error\":\"scheme_not_found\"}\n"
-                << std::flush;
-      return;
-    }
-
-    try {
-      auto word_u32 = apply_template(root_u32, se->templ);
-
-      // SPEC COMPLIANCE: Update AVL Tree with derived word
-      if (tree.contains(root_u32)) {
-        tree.addDerived(root_u32, word_u32);
-        tree.incrementFrequency(root_u32);
-      }
-
-      // FIXED JSON FORMAT: includes word, root, scheme
-      std::cout << "{\"ok\":true,"
-                << "\"word\":\"" << json_escape(u32_to_utf8(word_u32)) << "\","
-                << "\"root\":\"" << json_escape(root_utf8) << "\","
-                << "\"scheme\":\"" << json_escape(scheme_utf8) << "\""
-                << "}\n"
-                << std::flush;
-    } catch (const std::exception &e) {
-      std::cout << "{\"ok\":false,\"error\":\"" << json_escape(e.what())
-                << "\"}\n"
-                << std::flush;
-    }
-
-  } else if (cmd == "validate") {
-    string word_utf8 = get_val("word");
-    string root_utf8 = get_val("root");
-
-    auto word_u32 = utf8_to_u32(word_utf8);
-    auto root_u32 = normalize_ar(utf8_to_u32(root_utf8));
-
-    bool belongs = false;
-    std::vector<u32string> matched;
-
-    for (const auto &s : ht.allSchemes()) {
-      auto maybe_r = extract_root_from_word(word_u32, s.templ);
-      if (maybe_r) {
-        auto rn = normalize_ar(*maybe_r);
-        if (rn == root_u32) {
-          belongs = true;
-          matched.push_back(s.name);
-        }
-      }
-    }
-
-    // SPEC COMPLIANCE: Update AVL Tree if validated
-    if (belongs) {
-      if (tree.contains(root_u32)) {
-        tree.addDerived(root_u32, word_u32);
-        tree.incrementFrequency(root_u32);
-      }
-    }
-
-    // FIXED JSON FORMAT: ok is always true, belongs is true/false
-    std::cout << "{\"ok\":true,"
-              << "\"belongs\":" << (belongs ? "true" : "false") << ","
-              << "\"root\":\"" << json_escape(root_utf8) << "\","
-              << "\"word\":\"" << json_escape(word_utf8) << "\"";
-
-    if (belongs) {
-      std::cout << ",\"schemes\":[";
-      for (size_t i = 0; i < matched.size(); ++i) {
-        if (i)
-          std::cout << ",";
-        std::cout << "\"" << json_escape(u32_to_utf8(matched[i])) << "\"";
-      }
-      std::cout << "]";
-    }
-    std::cout << "}\n" << std::flush;
-
-  } else if (cmd == "game_question") {
-    std::vector<u32string> roots;
-    tree.getAllKeys([&](const AVLNode *n) { roots.push_back(n->key); });
-    auto schemes = ht.allSchemes();
-
-    if (roots.empty() || schemes.empty()) {
-      std::cout << "{\"ok\":false,\"error\":\"no_data\"}\n" << std::flush;
-      return;
-    }
-
-    static std::mt19937 rng(
-        std::chrono::steady_clock::now().time_since_epoch().count());
-    std::uniform_int_distribution<size_t> r_dist(0, roots.size() - 1);
-    std::uniform_int_distribution<size_t> s_dist(0, schemes.size() - 1);
-
-    for (int i = 0; i < 100; ++i) {
-      const auto &r = roots[r_dist(rng)];
-      const auto &s = schemes[s_dist(rng)];
-      try {
-        auto w = apply_template(r, s.templ);
-
-        // Generate options (random words)
-        std::vector<u32string> options;
-        options.push_back(w);
-        while (options.size() < 4) {
-          const auto &r2 = roots[r_dist(rng)];
-          const auto &s2 = schemes[s_dist(rng)];
-          try {
-            auto w2 = apply_template(r2, s2.templ);
-            bool exists = false;
-            for (auto &o : options)
-              if (o == w2)
-                exists = true;
-            if (!exists)
-              options.push_back(w2);
-          } catch (...) {
-          }
-        }
-        std::shuffle(options.begin(), options.end(), rng);
-
-        int correct_idx = -1;
-        for (size_t k = 0; k < options.size(); ++k)
-          if (options[k] == w)
-            correct_idx = k;
-
-        // FIXED JSON FORMAT: ok=true
-        std::cout << "{\"ok\":true,"
-                  << "\"root\":\"" << json_escape(u32_to_utf8(r)) << "\","
-                  << "\"scheme\":\"" << json_escape(u32_to_utf8(s.name))
-                  << "\","
-                  << "\"options\":[";
-        for (size_t k = 0; k < options.size(); ++k) {
-          if (k)
-            std::cout << ",";
-          std::cout << "\"" << json_escape(u32_to_utf8(options[k])) << "\"";
-        }
-        std::cout << "],\"correct_index\":" << correct_idx << "}\n"
-                  << std::flush;
-        return;
-      } catch (...) {
-      }
-    }
-    std::cout << "{\"ok\":false,\"error\":\"generation_failed\"}\n"
-              << std::flush;
-
-  } else {
-    std::cout << "{\"ok\":false,\"error\":\"unknown_command\"}\n" << std::flush;
-  }
-}
-
-int main(int argc, char **argv) {
-  bool server_mode = false;
-  for (int i = 1; i < argc; ++i) {
-    if (string(argv[i]) == "--server")
-      server_mode = true;
-  }
-
-  Args a;
-  if (!server_mode) {
-    if (!parse_args(argc, argv, a)) {
-      if (a.json)
-        std::cout << "{\"ok\":false,\"error\":\"bad_args\"}\n";
-      return 2;
-    }
-  } else {
-    for (int i = 1; i < argc; ++i) {
-      string arg = argv[i];
-      if (arg == "--data") {
-        auto v = get_opt_value(i, argc, argv);
-        if (v)
-          a.data_path = *v;
-      } else if (arg == "--schemes") {
-        auto v = get_opt_value(i, argc, argv);
-        if (v)
-          a.schemes_path = *v;
-      }
-    }
-    if (a.data_path.empty() || a.schemes_path.empty()) {
-      std::cerr << "Missing --data or --schemes for server mode\n";
-      return 1;
-    }
-  }
-
-  AVLTree tree;
-  HashTable ht(2048);
-
-  if (!load_roots_into_avl(a.data_path, tree)) {
-    if (server_mode || a.json)
-      std::cout << "{\"ok\":false,\"error\":\"cannot_read_roots\"}\n";
-    else
-      std::cerr << "Erreur: impossible de lire roots\n";
-    return 3;
-  }
-
-  if (!load_schemes_into_hash(a.schemes_path, ht)) {
-    if (server_mode || a.json)
-      std::cout << "{\"ok\":false,\"error\":\"cannot_read_schemes\"}\n";
-    else
-      std::cerr << "Erreur: impossible de lire schemes\n";
-    return 4;
-  }
-
-  if (server_mode) {
-    std::cerr << "Server mode started. Waiting for JSON on stdin...\n";
     string line;
-    while (std::getline(std::cin, line)) {
-      if (line.empty())
-        continue;
-      process_server_command(tree, ht, line);
-    }
-    return 0;
-  }
-
-  if (a.do_generate) {
-    auto root_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
-    auto scheme_name_u32 = utf8_to_u32(a.scheme_name_utf8);
-
-    SchemeEntry *se = ht.get(scheme_name_u32);
-    if (!se) {
-      if (a.json) {
-        std::cout
-            << "{\"ok\":false,\"error\":\"scheme_not_found\",\"scheme\":\""
-            << json_escape(a.scheme_name_utf8) << "\"}\n";
-      } else {
-        std::cerr << "Schème introuvable: " << a.scheme_name_utf8 << "\n";
-      }
-      return 5;
+    while (getline(in, line)) {
+        if (line.empty()) continue;
+        avl.insert(normalize_ar(utf8_to_u32(line)));
     }
 
-    try {
-      auto word_u32 = apply_template(root_u32, se->templ);
-      string word_utf8 = u32_to_utf8(word_u32);
+    return true;
+}
 
-      if (a.json) {
-        std::cout << "{\"ok\":true,\"root\":\"" << json_escape(a.root_utf8)
-                  << "\",\"scheme\":\"" << json_escape(a.scheme_name_utf8)
-                  << "\",\"word\":\"" << json_escape(word_utf8) << "\"}\n";
-      } else {
-        std::cout << "Mot généré: " << word_utf8 << "\n";
-      }
-      return 0;
-    } catch (const std::exception &e) {
-      if (a.json) {
-        std::cout << "{\"ok\":false,\"error\":\"exception\",\"message\":\""
-                  << json_escape(e.what()) << "\"}\n";
-      } else {
-        std::cerr << "Erreur: " << e.what() << "\n";
-      }
-      return 6;
+bool load_schemes(const string& file, HashTable& ht)
+{
+    ifstream in(file);
+    if (!in) {
+        cerr << "Erreur ouverture schemes.txt\n";
+        return false;
     }
-  }
 
-  if (a.do_game) {
-    return run_game(tree, ht, a.json);
-  }
+    string name, templ;
+    while (in >> name >> templ) {
+        ht.put(utf8_to_u32(name), utf8_to_u32(templ));
+    }
 
-  if (a.do_list_roots) {
-    if (a.json)
-      std::cout << "{\"ok\":true,\"roots\":[";
+    return true;
+}
+
+/* ==============================
+   Affichage menu
+================================ */
+
+void show_menu()
+{
+    cout << "\n=== Moteur Morphologique Arabe ===\n";
+    cout << "1) Générer un mot (racine + schème)\n";
+    cout << "2) Vérifier appartenance morphologique\n";
+    cout << "3) Lister les schèmes\n";
+    cout << "4) Lister les racines et dérivés\n";
+    cout << "5) Ajouter une racine\n";
+    cout << "6) Mini-jeu morphologique (bonus)\n";
+    cout << "7) Générer famille morphologique complète\n";
+    cout << "8) Gestion des schèmes\n";
+    cout << "9) Quitter\n";
+    cout << "Votre choix : ";
+}
+
+/* ==============================
+   Actions CLI
+================================ */
+
+void generate_word(AVLTree& avl, HashTable& ht)
+{
+    string root_utf8, scheme_utf8;
+
+    cout << "Racine : ";
+    cin >> root_utf8;
+
+    cout << "Schème : ";
+    cin >> scheme_utf8;
+
+    auto root = normalize_ar(utf8_to_u32(root_utf8));
+    auto scheme = utf8_to_u32(scheme_utf8);
+
+    auto result = generate_from_scheme(root, scheme, ht);
+
+    cout << "\nMot généré : "
+         << u32_to_utf8(result) << "\n";
+}
+
+void validate_word_cli(AVLTree& avl, HashTable& ht)
+{
+    string word_utf8, root_utf8;
+
+    cout << "Mot : ";
+    cin >> word_utf8;
+
+    cout << "Racine attendue : ";
+    cin >> root_utf8;
+
+    auto word = utf8_to_u32(word_utf8);
+    auto root = normalize_ar(utf8_to_u32(root_utf8));
+
+    auto res = validate_word(word, root, ht);
+
+    if (res.valid)
+        cout << "✅ OUI — Schème : "
+             << u32_to_utf8(res.scheme) << "\n";
     else
-      std::cout << "Liste des racines:\n";
+        cout << "❌ NON\n";
+}
 
-    bool first = true;
-    tree.getAllKeys([&](const AVLNode *n) {
-      if (a.json) {
-        if (!first)
-          std::cout << ",";
-        std::cout << "\"" << json_escape(u32_to_utf8(n->key)) << "\"";
-        first = false;
-      } else {
-        std::cout << "- " << u32_to_utf8(n->key) << "\n";
-      }
-    });
+void add_root_cli(AVLTree& avl)
+{
+    string root_utf8;
+    cout << "Nouvelle racine : ";
+    cin >> root_utf8;
 
-    if (a.json)
-      std::cout << "]}\n";
-    return 0;
-  }
+    avl.insert(normalize_ar(utf8_to_u32(root_utf8)));
+    cout << "Racine ajoutée.\n";
+}
 
-  if (a.do_list_schemes) {
-    if (a.json)
-      std::cout << "{\"ok\":true,\"schemes\":[";
+void list_roots_cli(AVLTree& avl)
+{
+    vector<u32string> roots = avl.inorder();
+
+    cout << "\n--- Racines ---\n";
+    for (auto& r : roots)
+        cout << u32_to_utf8(r) << "\n";
+}
+
+void list_schemes_cli(HashTable& ht)
+{
+    auto all = ht.entries();
+
+    cout << "\n--- Schèmes ---\n";
+    for (auto& p : all)
+        cout << u32_to_utf8(p.first)
+             << " -> "
+             << u32_to_utf8(p.second) << "\n";
+}
+
+/* ==============================
+   Mini jeu (BONUS)
+================================ */
+
+void mini_game(AVLTree& avl, HashTable& ht)
+{
+    auto root = avl.random_root();
+
+    cout << "\nRacine : " << u32_to_utf8(root) << "\n";
+    cout << "Propose un mot dérivé : ";
+
+    string answer;
+    cin >> answer;
+
+    auto res = validate_word(
+        utf8_to_u32(answer),
+        root,
+        ht
+    );
+
+    if (res.valid)
+        cout << "Bravo !\n";
     else
-      std::cout << "Liste des schèmes:\n";
+        cout << "Incorrect.\n";
+}
 
-    bool first = true;
-    for (const auto &s : ht.allSchemes()) {
-      if (a.json) {
-        if (!first)
-          std::cout << ",";
-        std::cout << "{\"name\":\"" << json_escape(u32_to_utf8(s.name))
-                  << "\",\"template\":\"" << json_escape(u32_to_utf8(s.templ))
-                  << "\"}";
-        first = false;
-      } else {
-        std::cout << "- " << u32_to_utf8(s.name) << " (" << u32_to_utf8(s.templ)
-                  << ")\n";
-      }
-    }
+/* ==============================
+   MAIN
+================================ */
 
-    if (a.json)
-      std::cout << "]}\n";
-    return 0;
-  }
+int main()
+{
+    AVLTree avl;
+    HashTable ht;
 
-  if (a.do_add_root) {
-    auto r_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
-    if (r_u32.size() != 3) {
-      if (a.json)
-        std::cout << "{\"ok\":false,\"error\":\"invalid_root_length\"}\n";
-      else
-        std::cerr << "Erreur: la racine doit faire 3 lettres\n";
-      return 10;
-    }
+    load_roots("data/roots.txt", avl);
+    load_schemes("data/schemes.txt", ht);
 
-    if (tree.contains(r_u32)) {
-      if (a.json)
-        std::cout << "{\"ok\":false,\"error\":\"duplicate_root\"}\n";
-      else
-        std::cerr << "Erreur: racine déjà existante\n";
-      return 11;
-    }
+    int choix;
 
-    // Update Memory
-    tree.insert(r_u32);
+    while (true)
+    {
+        show_menu();
+        cin >> choix;
 
-    // Update File (Persistence)
-    std::ofstream f(
-        a.data_path,
-        std::ios::app |
-            std::ios::binary); // binary to write utf8 bytes directly
-    if (f) {
-      f << a.root_utf8 << "\n";
-    } else {
-      if (a.json)
-        std::cout << "{\"ok\":false,\"error\":\"file_write_error\"}\n";
-      else
-        std::cerr << "Erreur: impossible d'écrire dans le fichier\n";
-      return 12;
-    }
-
-    if (a.json)
-      std::cout << "{\"ok\":true,\"root\":\"" << json_escape(a.root_utf8)
-                << "\"}\n";
-    else
-      std::cout << "Racine ajoutée: " << a.root_utf8 << "\n";
-    return 0;
-  }
-
-  {
-    auto word_u32 = utf8_to_u32(a.word_utf8);
-    auto root_u32 = normalize_ar(utf8_to_u32(a.root_utf8));
-
-    bool ok = false;
-    std::vector<u32string> matched;
-
-    for (const auto &s : ht.allSchemes()) {
-      auto maybe_r = extract_root_from_word(word_u32, s.templ);
-      if (maybe_r) {
-        auto rn = normalize_ar(*maybe_r);
-        if (rn == root_u32) {
-          ok = true;
-          matched.push_back(s.name);
+        switch (choix)
+        {
+            case 1: generate_word(avl, ht); break;
+            case 2: validate_word_cli(avl, ht); break;
+            case 3: list_schemes_cli(ht); break;
+            case 4: list_roots_cli(avl); break;
+            case 5: add_root_cli(avl); break;
+            case 6: mini_game(avl, ht); break;
+            case 7:
+                cout << "Fonction famille morphologique à connecter.\n";
+                break;
+            case 8:
+                cout << "Gestion schèmes (add/edit/delete).\n";
+                break;
+            case 9:
+                cout << "Au revoir.\n";
+                return 0;
+            default:
+                cout << "Choix invalide.\n";
         }
-      }
     }
-
-    // SPEC COMPLIANCE: Update AVL Tree if validated
-    if (ok) {
-      if (tree.contains(root_u32)) {
-        tree.addDerived(root_u32, word_u32);
-        tree.incrementFrequency(root_u32);
-      }
-    }
-
-    if (a.json) {
-      std::cout << "{\"ok\":true,\"belongs\":" << (ok ? "true" : "false")
-                << ",\"root\":\"" << json_escape(a.root_utf8)
-                << "\",\"word\":\"" << json_escape(a.word_utf8) << "\"";
-
-      if (ok) {
-        std::cout << ",\"schemes\":[";
-        for (size_t i = 0; i < matched.size(); ++i) {
-          if (i)
-            std::cout << ",";
-          std::cout << "\"" << json_escape(u32_to_utf8(matched[i])) << "\"";
-        }
-        std::cout << "]";
-      }
-
-      std::cout << "}\n";
-    } else {
-      if (!ok)
-        std::cout << "Résultat: NON\n";
-      else {
-        std::cout << "Résultat: OUI\nSchème(s): ";
-        for (auto &n : matched)
-          std::cout << u32_to_utf8(n) << " ";
-        std::cout << "\n";
-      }
-    }
-
-    return 0;
-  }
 }

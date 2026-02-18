@@ -11,10 +11,6 @@ bool isValidArabic(const std::u32string& s);
 bool isValidArabicRoot(const std::u32string& s);
 
 // Conversion UTF-8 <-> UTF-32
-std::u32string utf8_to_u32(const std::string& s);
-std::string u32_to_utf8(const std::u32string& s);
-
-// Normalisation de texte arabe (simplifiée)
 std::u32string normalize_ar(const std::u32string& in);
 
 // Appliquer un schème (template) à une racine

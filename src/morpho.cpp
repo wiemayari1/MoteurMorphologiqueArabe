@@ -1,8 +1,9 @@
 #include "morpho.h"
+#include "unicode_utils.h"
 #include <algorithm>
 #include <cctype>
 #include <random>
-
+#include <set>
 // Vérification si un caractère est arabe
 static bool isArabicChar(char32_t c) {
     return (c >= 0x0600 && c <= 0x06FF) || 
@@ -24,57 +25,6 @@ bool isValidArabicRoot(const std::u32string& s) {
     return s.length() == 3 && isValidArabic(s);
 }
 
-// Conversion UTF-8 <-> UTF-32
-std::u32string utf8_to_u32(const std::string& s) {
-    std::u32string result;
-    size_t i = 0;
-    while (i < s.size()) {
-        char32_t ch;
-        unsigned char byte = s[i];
-        
-        if ((byte & 0x80) == 0) {
-            ch = byte;
-            i += 1;
-        } else if ((byte & 0xE0) == 0xC0) {
-            ch = ((byte & 0x1F) << 6) | (s[i+1] & 0x3F);
-            i += 2;
-        } else if ((byte & 0xF0) == 0xE0) {
-            ch = ((byte & 0x0F) << 12) | ((s[i+1] & 0x3F) << 6) | (s[i+2] & 0x3F);
-            i += 3;
-        } else if ((byte & 0xF8) == 0xF0) {
-            ch = ((byte & 0x07) << 18) | ((s[i+1] & 0x3F) << 12) | 
-                 ((s[i+2] & 0x3F) << 6) | (s[i+3] & 0x3F);
-            i += 4;
-        } else {
-            ch = byte;
-            i += 1;
-        }
-        result.push_back(ch);
-    }
-    return result;
-}
-
-std::string u32_to_utf8(const std::u32string& s) {
-    std::string result;
-    for (char32_t ch : s) {
-        if (ch <= 0x7F) {
-            result.push_back(static_cast<char>(ch));
-        } else if (ch <= 0x7FF) {
-            result.push_back(static_cast<char>(0xC0 | ((ch >> 6) & 0x1F)));
-            result.push_back(static_cast<char>(0x80 | (ch & 0x3F)));
-        } else if (ch <= 0xFFFF) {
-            result.push_back(static_cast<char>(0xE0 | ((ch >> 12) & 0x0F)));
-            result.push_back(static_cast<char>(0x80 | ((ch >> 6) & 0x3F)));
-            result.push_back(static_cast<char>(0x80 | (ch & 0x3F)));
-        } else {
-            result.push_back(static_cast<char>(0xF0 | ((ch >> 18) & 0x07)));
-            result.push_back(static_cast<char>(0x80 | ((ch >> 12) & 0x3F)));
-            result.push_back(static_cast<char>(0x80 | ((ch >> 6) & 0x3F)));
-            result.push_back(static_cast<char>(0x80 | (ch & 0x3F)));
-        }
-    }
-    return result;
-}
 
 // Normalisation simplifiée de l'arabe
 std::u32string normalize_ar(const std::u32string& in) {

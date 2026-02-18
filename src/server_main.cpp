@@ -6,7 +6,8 @@
 #include "AVL.h"
 #include "hash_table.h"
 #include "morpho.h"
-
+#include "unicode_utils.h"
+#include <unistd.h>     // pour getcwd()
 using namespace morpho;
 
 void loadData(AVLTree& roots, HashTable& schemes) {
@@ -14,7 +15,8 @@ void loadData(AVLTree& roots, HashTable& schemes) {
     
     // Obtenir le chemin absolu
     char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
+    getcwd(cwd, sizeof(cwd));  // déjà là, mais ajoute :
+    (void)getcwd(cwd, sizeof(cwd));  // cast void = ignore explicitement le retour
     std::cout << "   Répertoire courant: " << cwd << "\n";
     
     // Charger racines
@@ -32,7 +34,7 @@ void loadData(AVLTree& roots, HashTable& schemes) {
         while (std::getline(rootsFile, line)) {
             if (line.empty() || line[0] == '#') continue;
             std::cout << "   Ligne lue: [" << line << "]\n";
-            auto u32line = normalize_ar(utf8_to_u32(line));
+            auto u32line = normalize_ar(unicode::utf8_to_u32(line));
             std::cout << "   Après normalisation: " << u32line.length() << " caractères\n";
             if (u32line.length() == 3) {
                 roots.insert(u32line);
@@ -64,8 +66,8 @@ void loadData(AVLTree& roots, HashTable& schemes) {
             if (sep != std::string::npos) {
                 std::string name = line.substr(0, sep);
                 std::string templ = line.substr(sep + 1);
-                schemes.put(normalize_ar(utf8_to_u32(name)), 
-                           normalize_ar(utf8_to_u32(templ)));
+                schemes.put(normalize_ar(unicode::utf8_to_u32(name)), 
+                           normalize_ar(unicode::utf8_to_u32(templ)));
                 std::cout << "   ⚖️  Schème chargé: " << name << "\n";
                 count++;
             }

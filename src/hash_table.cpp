@@ -1,6 +1,6 @@
 #include "hash_table.h"
 #include <iostream>
-
+#include "unicode_utils.h"
 // Implémentation de TransformRule
 std::u32string TransformRule::apply(const std::u32string& root) const {
     if (root.size() != 3) return U"";
@@ -55,7 +55,7 @@ void HashTable::resize() {
     for (const auto& bucket : old_table) {
         if (bucket.used && !bucket.deleted) {
             put(bucket.entry.name, bucket.entry.templ, 
-                u32_to_utf8(bucket.entry.rule.description));
+                unicode::u32_to_utf8(bucket.entry.rule.description));
         }
     }
 }
@@ -77,8 +77,8 @@ void HashTable::put(const std::u32string& name, const std::u32string& templ,
             table[j].entry.templ = templ;
             table[j].entry.rule.name = name;
             table[j].entry.rule.pattern = templ;
-            table[j].entry.rule.description = utf8_to_u32(description.empty() ? 
-                u32_to_utf8(templ) : description);
+            table[j].entry.rule.description = unicode::utf8_to_u32(description.empty() ? 
+                unicode::u32_to_utf8(templ) : description);
             count++;
             if (table[j].deleted) deleted_count--;
             return;
@@ -87,8 +87,8 @@ void HashTable::put(const std::u32string& name, const std::u32string& templ,
         if (table[j].used && !table[j].deleted && table[j].entry.name == name) {
             table[j].entry.templ = templ;
             table[j].entry.rule.pattern = templ;
-            table[j].entry.rule.description = utf8_to_u32(description.empty() ? 
-                u32_to_utf8(templ) : description);
+            table[j].entry.rule.description = unicode::utf8_to_u32(description.empty() ? 
+                unicode::u32_to_utf8(templ) : description);
             return;
         }
     }
