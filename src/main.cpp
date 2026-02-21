@@ -15,13 +15,10 @@ using namespace std;
 // Outils d'affichage TUI
 // ----------------------
 
-void clear_screen() {
-  // Efface l'écran (fonctionne dans la plupart des terminaux)
-  cout << "\033[2J\033[H";
-}
+void clear_screen() { cout << "\033[2J\033[H"; }
 
 void print_logo() {
-  cout << "\033[1;35m"; // magenta
+  cout << "\033[1;35m";
   cout << "   Moteur Morphologique Arabe     \n";
   cout << "\033[0m\n";
 }
@@ -43,7 +40,6 @@ void print_menu() {
   cout << "\nVotre choix : ";
 }
 
-// Lire un fichier texte UTF-8 complet dans une string
 static string read_file_utf8(const string &path) {
   ifstream f(path, ios::binary);
   if (!f) {
@@ -67,9 +63,6 @@ int main(int argc, char **argv) {
   AVLTree tree;
   HashTable ht(2048);
 
-  // ---------------------
-  // Chargement des racines
-  // ---------------------
   {
     string content = read_file_utf8(roots_path);
     istringstream in(content);
@@ -86,9 +79,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  // ---------------------
-  // Chargement des schèmes (NOM|TEMPLATE)
-  // ---------------------
   {
     string content = read_file_utf8(schemes_path);
     istringstream in(content);
@@ -110,7 +100,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Boucle principale (TUI)
   while (true) {
     clear_screen();
     print_menu();
@@ -120,13 +109,12 @@ int main(int argc, char **argv) {
       cout << "Entrée invalide, arrêt.\n";
       break;
     }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // vider le buffer
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     clear_screen();
     print_logo();
 
     if (choix == 1) {
-      // === Génération de mot ===
       cout << "\033[1;33m[ Génération de mots dérivés ]\033[0m\n\n";
       string r_utf8, sname_utf8;
       cout << "Entrer la racine (en arabe, UTF-8) : ";
@@ -143,9 +131,9 @@ int main(int argc, char **argv) {
       } else {
         try {
           auto word = apply_template(r_u32, se->templ);
-          cout << "Mot généré : \033[1;32m" << unicode::u32_to_utf8(word) << "\033[0m\n";
+          cout << "Mot généré : \033[1;32m" << unicode::u32_to_utf8(word)
+               << "\033[0m\n";
 
-          // Mise à jour des dérivés + fréquence
           if (tree.contains(r_u32)) {
             tree.addDerived(r_u32, word);
             tree.incrementFrequency(r_u32);
@@ -157,7 +145,6 @@ int main(int argc, char **argv) {
       }
 
     } else if (choix == 2) {
-      // === Vérification morphologique ===
       cout << "\033[1;33m[ Vérification d'appartenance morphologique "
               "]\033[0m\n\n";
       string w_utf8, r_utf8;
@@ -169,7 +156,8 @@ int main(int argc, char **argv) {
       auto w_u32 = unicode::utf8_to_u32(w_utf8);
       auto r_u32 = normalize_ar(unicode::utf8_to_u32(r_utf8));
 
-      vector<u32string> matching_schemes;
+      // ✅ CORRECTION ICI
+      vector<vector<char32_t>> matching_schemes;
       bool appartient = false;
 
       for (const auto &s : ht.allSchemes()) {
@@ -202,19 +190,19 @@ int main(int argc, char **argv) {
       }
 
     } else if (choix == 3) {
-      // === Lister les schèmes ===
       cout << "\033[1;33m[ Liste des schèmes ]\033[0m\n\n";
       for (const auto &s : ht.allSchemes()) {
-        cout << " - Nom : \033[1;32m" << unicode::u32_to_utf8(s.name) << "\033[0m"
+        cout << " - Nom : \033[1;32m" << unicode::u32_to_utf8(s.name)
+             << "\033[0m"
              << " | Template : \033[1;36m" << unicode::u32_to_utf8(s.templ)
              << "\033[0m\n";
       }
 
     } else if (choix == 4) {
-      // === Lister les racines et leurs dérivés ===
       cout << "\033[1;33m[ Racines et dérivés ]\033[0m\n\n";
       tree.forEach([](const AVLNode *n) {
-        cout << " * Racine : \033[1;32m" << unicode::u32_to_utf8(n->key) << "\033[0m"
+        cout << " * Racine : \033[1;32m" << unicode::u32_to_utf8(n->key)
+             << "\033[0m"
              << " (freq=" << n->frequency << ")\n";
         if (!n->derived.empty()) {
           cout << "   Dérivés : ";
@@ -226,7 +214,6 @@ int main(int argc, char **argv) {
       });
 
     } else if (choix == 5) {
-      // === Ajouter une racine ===
       cout << "\033[1;33m[ Ajout d'une nouvelle racine ]\033[0m\n\n";
       string r_utf8;
       cout << "Entrer la nouvelle racine (trilitère, en arabe) : ";
@@ -244,14 +231,14 @@ int main(int argc, char **argv) {
       }
 
     } else if (choix == 6) {
-      // === Mini-jeu ===
       cout << "\033[1;33m[ Mini-jeu morphologique ]\033[0m\n\n";
 
-      vector<u32string> roots;
+      // ✅ CORRECTIONS ICI
+      vector<vector<char32_t>> roots;
       tree.getAllKeys([&](const AVLNode *n) { roots.push_back(n->key); });
 
-      vector<u32string> scheme_names;
-      vector<u32string> scheme_templates;
+      vector<vector<char32_t>> scheme_names;
+      vector<vector<char32_t>> scheme_templates;
       for (const auto &s : ht.allSchemes()) {
         scheme_names.push_back(s.name);
         scheme_templates.push_back(s.templ);
@@ -264,7 +251,6 @@ int main(int argc, char **argv) {
       break;
 
     } else if (choix == 8) {
-      // === Ajouter un schème ===
       cout << "\033[1;33m[ Ajout d'un nouveau schème ]\033[0m\n\n";
       string name_utf8, templ_utf8;
       cout << "Entrer le nom du schème (ex: مفعول) : ";
@@ -283,7 +269,6 @@ int main(int argc, char **argv) {
       }
 
     } else if (choix == 9) {
-      // === Modifier un schème ===
       cout << "\033[1;33m[ Modification d'un schème ]\033[0m\n\n";
       string name_utf8;
       cout << "Entrer le nom du schème à modifier : ";
@@ -303,7 +288,6 @@ int main(int argc, char **argv) {
       }
 
     } else if (choix == 10) {
-      // === Supprimer un schème ===
       cout << "\033[1;33m[ Suppression d'un schème ]\033[0m\n\n";
       string name_utf8;
       cout << "Entrer le nom du schème à supprimer : ";
@@ -318,7 +302,6 @@ int main(int argc, char **argv) {
       }
 
     } else if (choix == 11) {
-      // === Supprimer une racine ===
       cout << "\033[1;33m[ Suppression d'une racine ]\033[0m\n\n";
       string r_utf8;
       cout << "Entrer la racine à supprimer : ";

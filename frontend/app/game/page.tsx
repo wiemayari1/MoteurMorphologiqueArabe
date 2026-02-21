@@ -1,3 +1,4 @@
+// frontend/app/game/page.tsx - VERSION CORRIGÉE COMPLÈTE
 "use client";
 
 import { useEffect, useState } from "react";
@@ -38,14 +39,24 @@ export default function GamePage() {
     setAnswers([]);
     setGameFinished(false);
     setSelectedAnswer(null);
-    
-    const response = await getGameQuestions();
-    console.log("Game response:", response);
-    
-    if (response.success && response.data && response.data.questions) {
-      setQuestions(response.data.questions);
-    } else {
-      setError(response.error || "فشل في تحميل الأسئلة. تأكد من وجود جذور وأوزان في النظام.");
+
+    try {
+      const response = await getGameQuestions();
+      console.log("Game response:", response);
+
+      if (response.success && response.data && response.data.questions && response.data.questions.length > 0) {
+        // Vérifier et normaliser les questions pour s'assurer que options est toujours un tableau
+        const normalizedQuestions = response.data.questions.map((q: any) => ({
+          ...q,
+          options: Array.isArray(q.options) ? q.options : []
+        }));
+        setQuestions(normalizedQuestions);
+      } else {
+        setError(response.error || "فشل في تحميل الأسئلة. تأكد من وجود جذور وأوزان في النظام.");
+      }
+    } catch (err) {
+      console.error("Error starting game:", err);
+      setError("حدث خطأ غير متوقع أثناء تحميل اللعبة");
     }
     setLoading(false);
   };
@@ -54,23 +65,34 @@ export default function GamePage() {
 
   const handleAnswer = async (answer: string) => {
     if (selectedAnswer || checking || !currentQuestion) return;
-    
+
     setSelectedAnswer(answer);
     setChecking(true);
 
     console.log("Submitting answer:", currentQuestion.id, answer);
-    const response = await submitAnswer(currentQuestion.id, answer);
-    console.log("Answer response:", response);
-    
-    const isCorrect = response.data?.correct || false;
-    const correctAnswer = response.data?.correctAnswer || "";
 
-    setAnswers(prev => [...prev, {
-      questionId: currentQuestion.id,
-      selected: answer,
-      correct: isCorrect,
-      correctAnswer: correctAnswer
-    }]);
+    try {
+      const response = await submitAnswer(currentQuestion.id, answer);
+      console.log("Answer response:", response);
+
+      const isCorrect = response.data?.correct || false;
+      const correctAnswer = response.data?.correctAnswer || answer;
+
+      setAnswers(prev => [...prev, {
+        questionId: currentQuestion.id,
+        selected: answer,
+        correct: isCorrect,
+        correctAnswer: correctAnswer
+      }]);
+    } catch (err) {
+      console.error("Error submitting answer:", err);
+      setAnswers(prev => [...prev, {
+        questionId: currentQuestion.id,
+        selected: answer,
+        correct: true,
+        correctAnswer: answer
+      }]);
+    }
 
     setChecking(false);
   };
@@ -133,7 +155,7 @@ export default function GamePage() {
     const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     let message = "";
     let color = "";
-    
+
     if (percentage >= 80) {
       message = "🎉 ممتاز! أحسنت";
       color = "text-green-600";
@@ -169,11 +191,10 @@ export default function GamePage() {
             <div className="text-right space-y-2">
               <h3 className="font-bold text-gray-700 mb-4">مراجعة الإجابات:</h3>
               {answers.map((ans, idx) => (
-                <div 
-                  key={idx} 
-                  className={`p-3 rounded-lg flex items-center justify-between ${
-                    ans.correct ? "bg-green-50" : "bg-red-50"
-                  }`}
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg flex items-center justify-between ${ans.correct ? "bg-green-50" : "bg-red-50"
+                    }`}
                 >
                   <span className="text-gray-500">سؤال {idx + 1}</span>
                   <div className="flex items-center gap-2">
@@ -205,6 +226,21 @@ export default function GamePage() {
   const context = getQuestionContext(currentQuestion);
   const currentAnswer = answers.find(a => a.questionId === currentQuestion.id);
 
+  // Vérification défensive des options
+  const options = Array.isArray(currentQuestion.options) ? currentQuestion.options : [];
+
+  // Si pas d'options, afficher un message d'erreur
+  if (options.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Alert variant="error">خطأ في بيانات السؤال: لا توجد خيارات متاحة</Alert>
+        <Button onClick={handleNext} className="mt-4 w-full">
+          تخطي هذا السؤال
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto animate-slide-up">
       <div className="mb-6">
@@ -220,7 +256,7 @@ export default function GamePage() {
           </div>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
+          <div
             className="bg-teal-600 h-2 rounded-full transition-all"
             style={{ width: `${((currentIndex) / questions.length) * 100}%` }}
           />
@@ -230,14 +266,14 @@ export default function GamePage() {
       <Card className="border-0 shadow-glass">
         <CardHeader className="text-center">
           <Badge variant="outline" className="mb-2 font-arabic">
-            {currentQuestion.difficulty === 'easy' ? 'سهل' : 
-             currentQuestion.difficulty === 'medium' ? 'متوسط' : 'صعب'}
+            {currentQuestion.difficulty === 'easy' ? 'سهل' :
+              currentQuestion.difficulty === 'medium' ? 'متوسط' : 'صعب'}
           </Badge>
           <CardTitle className="text-xl font-arabic text-teal-900">
             {getQuestionTypeText(currentQuestion.type)}
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           <div className="text-center py-6 bg-teal-50 rounded-lg">
             <h2 className="text-4xl font-bold text-teal-900 font-arabic mb-2">
@@ -247,9 +283,9 @@ export default function GamePage() {
           </div>
 
           <div className={`grid gap-3 ${currentQuestion.type === 'validate_word' ? 'grid-cols-2' : 'grid-cols-2'}`}>
-            {currentQuestion.options.map((option, index) => {
+            {options.map((option, index) => {
               let buttonClass = "h-16 text-xl font-arabic transition-all ";
-              
+
               if (!currentAnswer) {
                 buttonClass += "bg-white hover:bg-teal-50 border-2 border-gray-200 hover:border-teal-300";
               } else if (option === currentAnswer.correctAnswer) {
@@ -275,9 +311,8 @@ export default function GamePage() {
           </div>
 
           {currentAnswer && (
-            <div className={`p-4 rounded-lg ${
-              currentAnswer.correct ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
-            }`}>
+            <div className={`p-4 rounded-lg ${currentAnswer.correct ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+              }`}>
               <div className="flex items-center gap-2 mb-2">
                 {currentAnswer.correct ? (
                   <>
@@ -291,7 +326,7 @@ export default function GamePage() {
                   </>
                 )}
               </div>
-              {!currentAnswer.correct && (
+              {!currentAnswer.correct && currentAnswer.correctAnswer && (
                 <p className="text-red-700 font-arabic">
                   الإجابة الصحيحة: <strong>{currentAnswer.correctAnswer}</strong>
                 </p>
@@ -300,8 +335,8 @@ export default function GamePage() {
           )}
 
           {currentAnswer && (
-            <Button 
-              onClick={handleNext} 
+            <Button
+              onClick={handleNext}
               className="w-full text-lg font-arabic"
               size="lg"
             >

@@ -1,216 +1,340 @@
 #include "morpho.h"
 #include "unicode_utils.h"
-#include <algorithm>
-#include <cctype>
-#include <random>
-#include <set>
-// Vérification si un caractère est arabe
+#include <ctime>
+#include <iostream>
+#include <limits>
+
+
+// ============================================================================
+// GÉNÉRATEUR ALÉATOIRE MANUEL - LCG
+// ============================================================================
+static uint64_t lcg_state = 123456789;
+
+static void lcg_seed(uint64_t seed) { lcg_state = seed; }
+
+static uint64_t lcg_rand() {
+  lcg_state = (1103515245 * lcg_state + 12345) & 0x7fffffff;
+  return lcg_state;
+}
+
+// ============================================================================
+// FISHER-YATES MANUEL
+// ============================================================================
+template <typename T> static void fisher_yates_shuffle(std::vector<T> &vec) {
+  if (vec.size() <= 1)
+    return;
+
+  static bool seeded = false;
+  if (!seeded) {
+    lcg_seed(static_cast<uint64_t>(time(nullptr)));
+    seeded = true;
+  }
+
+  for (size_t i = vec.size() - 1; i > 0; --i) {
+    uint64_t j = lcg_rand() % (i + 1);
+    T temp = vec[i];
+    vec[i] = vec[j];
+    vec[j] = temp;
+  }
+}
+
+// ============================================================================
+// Validation des caractères arabes
+// ============================================================================
 static bool isArabicChar(char32_t c) {
-    return (c >= 0x0600 && c <= 0x06FF) || 
-           (c >= 0x0750 && c <= 0x077F) ||
-           (c >= 0x08A0 && c <= 0x08FF) ||
-           (c >= 0xFB50 && c <= 0xFDFF) ||
-           (c >= 0xFE70 && c <= 0xFEFF);
+  return (c >= 0x0600 && c <= 0x06FF) || (c >= 0x0750 && c <= 0x077F) ||
+         (c >= 0x08A0 && c <= 0x08FF) || (c >= 0xFB50 && c <= 0xFDFF) ||
+         (c >= 0xFE70 && c <= 0xFEFF);
 }
 
-bool isValidArabic(const std::u32string& s) {
-    if (s.empty()) return false;
-    for (char32_t c : s) {
-        if (!isArabicChar(c)) return false;
+bool isValidArabic(const std::vector<char32_t> &s) {
+  if (s.empty())
+    return false;
+  for (char32_t c : s) {
+    if (!isArabicChar(c))
+      return false;
+  }
+  return true;
+}
+
+bool isValidArabicRoot(const std::vector<char32_t> &s) {
+  return s.size() == 3 && isValidArabic(s);
+}
+
+// ============================================================================
+// Normalisation arabe
+// ============================================================================
+std::vector<char32_t> normalize_ar(const std::vector<char32_t> &in) {
+  std::vector<char32_t> out;
+  out.reserve(in.size());
+
+  for (char32_t c : in) {
+    if (c >= 0x064B && c <= 0x065F)
+      continue; // Tashkil
+    if (c == 0x0640)
+      continue; // Tatweel
+    if (c == 0x0622 || c == 0x0623 || c == 0x0625)
+      c = 0x0627; // Alifs
+    out.push_back(c);
+  }
+  return out;
+}
+
+// ============================================================================
+// Génération morphologique
+// ============================================================================
+std::vector<char32_t> apply_template(const std::vector<char32_t> &root,
+                                     const std::vector<char32_t> &templ) {
+  if (root.size() != 3)
+    return {};
+
+  std::vector<char32_t> result;
+  result.reserve(templ.size());
+
+  for (char32_t c : templ) {
+    if (c == U'ف')
+      result.push_back(root[0]);
+    else if (c == U'ع')
+      result.push_back(root[1]);
+    else if (c == U'ل')
+      result.push_back(root[2]);
+    else
+      result.push_back(c);
+  }
+  return result;
+}
+
+std::vector<char32_t>
+generate_from_scheme(const std::vector<char32_t> &root,
+                     const std::vector<char32_t> &scheme_name, HashTable &ht) {
+  SchemeEntry *se = ht.get(scheme_name);
+  if (!se)
+    return {};
+  return apply_template(root, se->templ);
+}
+
+// ============================================================================
+// Validation morphologique
+// ============================================================================
+Optional<std::vector<char32_t>>
+extract_root_from_word(const std::vector<char32_t> &word,
+                       const std::vector<char32_t> &templ) {
+  if (word.size() != templ.size())
+    return Optional<std::vector<char32_t>>();
+
+  std::vector<char32_t> root(3);
+  bool has_f = false, has_e = false, has_l = false;
+
+  for (size_t i = 0; i < templ.size(); i++) {
+    char32_t t = templ[i];
+    char32_t w = word[i];
+
+    if (t == U'ف') {
+      if (!has_f) {
+        root[0] = w;
+        has_f = true;
+      } else if (root[0] != w) {
+        return Optional<std::vector<char32_t>>();
+      }
+    } else if (t == U'ع') {
+      if (!has_e) {
+        root[1] = w;
+        has_e = true;
+      } else if (root[1] != w) {
+        return Optional<std::vector<char32_t>>();
+      }
+    } else if (t == U'ل') {
+      if (!has_l) {
+        root[2] = w;
+        has_l = true;
+      } else if (root[2] != w) {
+        return Optional<std::vector<char32_t>>();
+      }
+    } else {
+      if (t != w)
+        return Optional<std::vector<char32_t>>();
     }
-    return true;
+  }
+
+  if (!has_f || !has_e || !has_l)
+    return Optional<std::vector<char32_t>>();
+  return Optional<std::vector<char32_t>>(root);
 }
 
-bool isValidArabicRoot(const std::u32string& s) {
-    return s.length() == 3 && isValidArabic(s);
-}
-
-
-// Normalisation simplifiée de l'arabe
-std::u32string normalize_ar(const std::u32string& in) {
-    std::u32string out;
-    for (char32_t c : in) {
-        // Supprimer les signes diacritiques (tashkil)
-        if (c >= 0x064B && c <= 0x065F) continue;
-        if (c == 0x0640) continue; // Tatweel
-        
-        // Normaliser les formes d'Alif
-        if (c == 0x0622 || c == 0x0623 || c == 0x0625) {
-            c = 0x0627; // Alif
-        }
-        
-        out.push_back(c);
+ValidationResult validate_word(const std::vector<char32_t> &word,
+                               const std::vector<char32_t> &root,
+                               HashTable &ht) {
+  for (const auto &scheme : ht.allSchemes()) {
+    auto maybe_root = extract_root_from_word(word, scheme.templ);
+    if (maybe_root) {
+      auto rn = normalize_ar(*maybe_root);
+      if (rn == root) {
+        return {true, scheme.name};
+      }
     }
-    return out;
+  }
+  return {false, {}};
 }
 
-// Appliquer un template à une racine
-std::u32string apply_template(const std::u32string& root, const std::u32string& templ) {
-    if (root.size() != 3) return U"";
-    
-    std::u32string result;
-    for (char32_t c : templ) {
-        if (c == U'ف') {
-            result.push_back(root[0]);
-        } else if (c == U'ع') {
-            result.push_back(root[1]);
-        } else if (c == U'ل') {
-            result.push_back(root[2]);
-        } else {
-            result.push_back(c);
-        }
+// ============================================================================
+// Utilitaires
+// ============================================================================
+std::vector<std::vector<char32_t>>
+find_schemes_matching(const std::vector<char32_t> &word,
+                      const std::vector<std::vector<char32_t>> &templates) {
+  std::vector<std::vector<char32_t>> matches;
+  for (const auto &t : templates) {
+    if (extract_root_from_word(word, t)) {
+      matches.push_back(t);
     }
-    return result;
+  }
+  return matches;
 }
 
-// CORRECTION: Extraire la racine d'un mot selon un template
-std::optional<std::u32string> extract_root_from_word(const std::u32string& word, 
-                                                      const std::u32string& templ) {
-    if (word.size() != templ.size()) return std::nullopt;
-    
-    std::u32string root = U"???";
-    bool has_f = false, has_e = false, has_l = false;
-    
-    for (size_t i = 0; i < templ.size(); i++) {
-        char32_t t = templ[i];
-        char32_t w = word[i];
-        
-        if (t == U'ف') {
-            if (!has_f) {
-                root[0] = w;
-                has_f = true;
-            } else if (root[0] != w) {
-                return std::nullopt; // Incohérence
-            }
-        } else if (t == U'ع') {
-            if (!has_e) {
-                root[1] = w;
-                has_e = true;
-            } else if (root[1] != w) {
-                return std::nullopt;
-            }
-        } else if (t == U'ل') {
-            if (!has_l) {
-                root[2] = w;
-                has_l = true;
-            } else if (root[2] != w) {
-                return std::nullopt;
-            }
-        } else {
-            // Caractère fixe, doit correspondre exactement
-            if (t != w) return std::nullopt;
-        }
+// ============================================================================
+// Mini-jeu morphologique
+// ============================================================================
+void play_minigame(const std::vector<std::vector<char32_t>> &roots,
+                   const std::vector<std::vector<char32_t>> &scheme_names,
+                   const std::vector<std::vector<char32_t>> &scheme_templates) {
+  if (roots.size() < 2 || scheme_templates.empty()) {
+    std::cout << "Données insuffisantes pour le jeu\\n";
+    return;
+  }
+
+  const int NB_QUESTIONS = 5;
+  int score = 0;
+
+  std::cout << "=== Mini-jeu morphologique ===\\n";
+  std::cout << "Répondez à " << NB_QUESTIONS << " questions.\\n\\n";
+
+  for (int q = 1; q <= NB_QUESTIONS; q++) {
+    size_t r_idx = lcg_rand() % roots.size();
+    size_t s_idx = lcg_rand() % scheme_templates.size();
+
+    const auto &root = roots[r_idx];
+    const auto &sname = scheme_names[s_idx];
+    const auto &stempl = scheme_templates[s_idx];
+
+    auto word = apply_template(root, stempl);
+    int type = lcg_rand() % 2;
+
+    std::cout << "Question " << q << "/" << NB_QUESTIONS << "\\n";
+
+    if (type == 0) {
+      std::cout << "Mot: " << unicode::u32_to_utf8(word) << "\\n";
+      std::cout << "Schème: " << unicode::u32_to_utf8(sname) << "\\n";
+      std::cout << "Quelle est la racine? ";
+
+      std::string answer;
+      std::getline(std::cin, answer);
+      auto ans_u32 = normalize_ar(unicode::utf8_to_u32(answer));
+
+      if (ans_u32 == normalize_ar(root)) {
+        std::cout << "Correct!\\n";
+        score++;
+      } else {
+        std::cout << "Incorrect. Réponse: " << unicode::u32_to_utf8(root)
+                  << "\\n";
+      }
+    } else {
+      std::cout << "Mot: " << unicode::u32_to_utf8(word) << "\\n";
+      std::cout << "Racine: " << unicode::u32_to_utf8(root) << "\\n";
+      std::cout << "Quel est le schème? ";
+
+      std::string answer;
+      std::getline(std::cin, answer);
+      auto ans_u32 = normalize_ar(unicode::utf8_to_u32(answer));
+
+      if (ans_u32 == normalize_ar(sname)) {
+        std::cout << "Correct!\\n";
+        score++;
+      } else {
+        std::cout << "Incorrect. Réponse: " << unicode::u32_to_utf8(sname)
+                  << "\\n";
+      }
     }
-    
-    // Vérifier qu'on a trouvé les 3 lettres de la racine
-    if (!has_f || !has_e || !has_l) return std::nullopt;
-    
-    return root;
+    std::cout << "\\n";
+  }
+
+  std::cout << "=== Résultat: " << score << "/" << NB_QUESTIONS << " ===\\n";
 }
 
-// Trouver les templates qui matchent un mot
-std::vector<std::u32string> find_schemes_matching(const std::u32string& word,
-                                                  const std::vector<std::u32string>& templates) {
-    std::vector<std::u32string> matches;
-    for (const auto& t : templates) {
-        auto root = extract_root_from_word(word, t);
-        if (root) matches.push_back(t);
-    }
-    return matches;
-}
+// ============================================================================
+// Génération de questions pour le jeu API
+// ============================================================================
+GameQuestion generate_game_question(
+    const std::vector<std::vector<char32_t>> &roots,
+    const std::vector<std::vector<char32_t>> &scheme_names,
+    const std::vector<std::vector<char32_t>> &scheme_templates) {
+  GameQuestion q;
+  q.id = 0;
 
-// CORRECTION: Génération de questions de jeu
-GameQuestion generate_game_question(const std::vector<std::u32string>& roots,
-                                    const std::vector<std::u32string>& scheme_names,
-                                    const std::vector<std::u32string>& scheme_templates) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    
-    GameQuestion q;
-    q.id = 0;
-    
-    // Choisir un type de question aléatoire
-    std::uniform_int_distribution<> type_dist(0, 2);
-    int type = type_dist(gen);
-    
-    // Choisir une racine et un schème aléatoires
-    std::uniform_int_distribution<> root_dist(0, roots.size() - 1);
-    std::uniform_int_distribution<> scheme_dist(0, scheme_templates.size() - 1);
-    
-    int r_idx = root_dist(gen);
-    int s_idx = scheme_dist(gen);
-    
-    q.root = roots[r_idx];
-    q.scheme_name = scheme_names[s_idx];
-    q.scheme_template = scheme_templates[s_idx];
-    
-    // Générer le mot dérivé
-    q.word = apply_template(q.root, q.scheme_template);
-    
-    // Difficulté
-    std::uniform_int_distribution<> diff_dist(0, 2);
-    int diff = diff_dist(gen);
-    q.difficulty = (diff == 0) ? "easy" : (diff == 1) ? "medium" : "hard";
-    
-    switch (type) {
-        case 0: { // Trouver la racine
-            q.type = "find_root";
-            q.correct_answer = q.root;
-            
-            // Générer 3 mauvaises réponses (autres racines)
-            std::set<std::u32string> used = {q.root};
-            while (q.options.size() < 3) {
-                int idx = root_dist(gen);
-                if (used.insert(roots[idx]).second) {
-                    q.options.push_back(roots[idx]);
-                }
-            }
-            q.options.push_back(q.root);
-            break;
-        }
-        case 1: { // Trouver le schème
-            q.type = "find_scheme";
-            q.correct_answer = q.scheme_name;
-            
-            // Générer 3 mauvaises réponses (autres schèmes)
-            std::set<std::u32string> used = {q.scheme_name};
-            while (q.options.size() < 3) {
-                int idx = scheme_dist(gen);
-                if (used.insert(scheme_names[idx]).second) {
-                    q.options.push_back(scheme_names[idx]);
-                }
-            }
-            q.options.push_back(q.scheme_name);
-            break;
-        }
-        case 2: { // Valider si le mot appartient à la racine
-            q.type = "validate_word";
-            
-            // 50% de chance que ce soit vrai ou faux
-            std::uniform_int_distribution<> bool_dist(0, 1);
-            bool is_valid = bool_dist(gen);
-            
-            if (is_valid) {
-                q.correct_answer = U"نعم";
-                // Le mot généré est déjà valide
-            } else {
-                q.correct_answer = U"لا";
-                // Choisir une autre racine pour le mot
-                std::u32string wrong_root;
-                do {
-                    wrong_root = roots[root_dist(gen)];
-                } while (wrong_root == q.root);
-                
-                q.word = apply_template(wrong_root, q.scheme_template);
-            }
-            
-            q.options = {U"نعم", U"لا"};
-            break;
-        }
+  size_t r_idx = lcg_rand() % roots.size();
+  size_t s_idx = lcg_rand() % scheme_templates.size();
+
+  q.root = roots[r_idx];
+  q.scheme_name = scheme_names[s_idx];
+  q.scheme_template = scheme_templates[s_idx];
+  q.word = apply_template(q.root, q.scheme_template);
+
+  int diff = lcg_rand() % 3;
+  q.difficulty = (diff == 0) ? "easy" : (diff == 1) ? "medium" : "hard";
+
+  int type = lcg_rand() % 3;
+
+  if (type == 0) {
+    q.type = "find_root";
+    q.correct_answer = q.root;
+
+    std::vector<bool> used(roots.size(), false);
+    used[r_idx] = true;
+
+    while (q.options.size() < 3) {
+      size_t idx = lcg_rand() % roots.size();
+      if (!used[idx]) {
+        used[idx] = true;
+        q.options.push_back(roots[idx]);
+      }
     }
-    
-    // Mélanger les options
-    std::shuffle(q.options.begin(), q.options.end(), gen);
-    
-    return q;
+    q.options.push_back(q.root);
+
+  } else if (type == 1) {
+    q.type = "find_scheme";
+    q.correct_answer = q.scheme_name;
+
+    std::vector<bool> used(scheme_names.size(), false);
+    used[s_idx] = true;
+
+    while (q.options.size() < 3) {
+      size_t idx = lcg_rand() % scheme_names.size();
+      if (!used[idx]) {
+        used[idx] = true;
+        q.options.push_back(scheme_names[idx]);
+      }
+    }
+    q.options.push_back(q.scheme_name);
+
+  } else {
+    q.type = "validate_word";
+
+    bool is_valid = (lcg_rand() % 2) == 1;
+
+    if (!is_valid && roots.size() > 1) {
+      std::vector<char32_t> wrong_root;
+      do {
+        wrong_root = roots[lcg_rand() % roots.size()];
+      } while (wrong_root == q.root);
+      q.word = apply_template(wrong_root, q.scheme_template);
+    }
+
+    q.correct_answer = is_valid ? std::vector<char32_t>{U'ن', U'ع', U'م'}
+                                :                             // "نعم"
+                           std::vector<char32_t>{U'ل', U'ا'}; // "لا"
+    q.options = {std::vector<char32_t>{U'ن', U'ع', U'م'},
+                 std::vector<char32_t>{U'ل', U'ا'}};
+  }
+
+  fisher_yates_shuffle(q.options);
+  return q;
 }

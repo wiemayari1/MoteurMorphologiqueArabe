@@ -1,3 +1,4 @@
+// frontend/app/generate/page.tsx - VERSION CORRIGÉE COMPLÈTE
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,12 +13,12 @@ import type { GeneratedWord, Scheme } from "@/lib/types";
 import { Sparkles, Copy, Check, AlertCircle, BookOpen, Filter } from "lucide-react";
 
 // Checkbox natif sans dépendance externe
-function Checkbox({ 
-  checked, 
-  onCheckedChange, 
-  className 
-}: { 
-  checked: boolean; 
+function Checkbox({
+  checked,
+  onCheckedChange,
+  className
+}: {
+  checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   className?: string;
 }) {
@@ -48,11 +49,15 @@ export default function GeneratePage() {
   }, []);
 
   const loadSchemes = async () => {
-    const response = await getSchemes();
-    if (response.success && response.data && Array.isArray(response.data)) {
-      setSchemes(response.data);
-    } else {
-      console.error('Failed to load schemes:', response.error);
+    try {
+      const response = await getSchemes();
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setSchemes(response.data);
+      } else {
+        console.error('Failed to load schemes:', response.error);
+      }
+    } catch (err) {
+      console.error('Error loading schemes:', err);
     }
   };
 
@@ -77,7 +82,7 @@ export default function GeneratePage() {
   };
 
   const toggleScheme = (schemeName: string) => {
-    setSelectedSchemes(prev => 
+    setSelectedSchemes(prev =>
       prev.includes(schemeName)
         ? prev.filter(s => s !== schemeName)
         : [...prev, schemeName]
@@ -97,23 +102,27 @@ export default function GeneratePage() {
 
     try {
       const response = await generateWords(root, selectedSchemes.length > 0 ? selectedSchemes : undefined);
-      
+
       if (response.success && response.data) {
-        // Vérification sécurisée des données
+        // CORRECTION: Vérification correcte des données
         const data = response.data;
+
+        // Vérifier que derivatives existe et est un tableau
         if (data.derivatives && Array.isArray(data.derivatives)) {
           setResults(data.derivatives);
         } else {
           setResults([]);
         }
-        
+
+        // Vérifier que family existe et est un tableau
         if (data.family && Array.isArray(data.family)) {
           setFamily(data.family);
         } else {
           setFamily([]);
         }
-        
-        if (data.derivatives?.length === 0) {
+
+        // Message si aucun résultat
+        if (!data.derivatives || data.derivatives.length === 0) {
           setError("لم يتم العثور على أوزان صرفية. أضف أوزاناً أولاً.");
         }
       } else {
@@ -123,7 +132,7 @@ export default function GeneratePage() {
       setError("حدث خطأ غير متوقع");
       console.error(err);
     }
-    
+
     setLoading(false);
   };
 
@@ -177,8 +186,8 @@ export default function GeneratePage() {
                 </p>
               )}
             </div>
-            <Button 
-              onClick={handleGenerate} 
+            <Button
+              onClick={handleGenerate}
               disabled={loading || !!inputError || root.length !== 3}
               className="gap-2"
             >
@@ -196,7 +205,7 @@ export default function GeneratePage() {
           {/* Filters */}
           {schemes.length > 0 && (
             <div className="border rounded-lg p-4 bg-gray-50">
-              <div 
+              <div
                 className="flex items-center justify-between cursor-pointer"
                 onClick={() => setShowFilters(!showFilters)}
               >
@@ -208,7 +217,7 @@ export default function GeneratePage() {
                   {selectedSchemes.length > 0 ? `${selectedSchemes.length} مختار` : "الكل"}
                 </Badge>
               </div>
-              
+
               {showFilters && (
                 <div className="mt-4 space-y-3 animate-fade-in">
                   <div className="flex gap-2">
@@ -221,11 +230,11 @@ export default function GeneratePage() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {schemes.map((scheme) => (
-                      <label 
-                        key={scheme.id} 
+                      <label
+                        key={scheme.id}
                         className="flex items-center gap-2 p-2 bg-white rounded border cursor-pointer hover:bg-gray-50"
                       >
-                        <Checkbox 
+                        <Checkbox
                           checked={selectedSchemes.includes(scheme.name)}
                           onCheckedChange={() => toggleScheme(scheme.name)}
                         />
@@ -248,7 +257,7 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* Results - Vérification sécurisée avec && */}
+          {/* Results - CORRECTION: Vérification sécurisée */}
           {!loading && results && results.length > 0 && (
             <div className="space-y-6 animate-fade-in">
               {/* Family Overview */}
@@ -289,17 +298,17 @@ export default function GeneratePage() {
                         )}
                       </Button>
                     </div>
-                    
+
                     <div className="text-right flex-1 mr-4">
                       <p className="text-2xl font-bold text-teal-900 font-arabic mb-1">
                         {item.result}
                       </p>
                       <p className="text-sm text-gray-500 font-arabic">
-                        الوزن: <span className="font-bold">{item.scheme_name}</span> 
+                        الوزن: <span className="font-bold">{item.scheme_name}</span>
                         {" "}(<code className="bg-gray-100 px-1 rounded">{item.scheme_pattern}</code>)
                       </p>
                     </div>
-                    
+
                     <Badge variant="secondary">{index + 1}</Badge>
                   </div>
                 ))}

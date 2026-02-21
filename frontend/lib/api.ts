@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// frontend/lib/api.ts - VERSION CORRIGÉE COMPLÈTE ET FINALE
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// ==================== INTERFACES ====================
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -56,187 +58,311 @@ export interface GameQuestion {
   options: string[];
 }
 
-// Validation côté client pour l'arabe
+// ==================== VALIDATION UTILITAIRES ====================
+
 export function isArabicText(text: string): boolean {
-  if (!text) return false;
-  // Regex pour lettres arabes uniquement (sans espaces)
-  const arabicRegex = /^[\u0600-\u06FF\u0750-\u077F]+$/;
-  return arabicRegex.test(text);
+  if (!text || typeof text !== 'string') return false;
+  const arabicRegex = /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+$/;
+  const cleaned = text.trim().replace(/\s+/g, '');
+  return arabicRegex.test(cleaned) && cleaned.length > 0;
 }
 
 export function isValidRoot(text: string): boolean {
-  if (!text) return false;
-  const normalized = text.trim().replace(/[\u0640]/g, '');
+  if (!text || typeof text !== 'string') return false;
+  const normalized = text.trim().replace(/[\u0640]/g, '').replace(/\s+/g, '');
   return isArabicText(normalized) && normalized.length === 3;
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+export function normalizeArabic(text: string): string {
+  if (!text) return '';
+  return text
+    .trim()
+    .replace(/[\u0640]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[\u200B-\u200F\uFEFF]/g, '')
+    .trim();
+}
+
+// ==================== FONCTION DE BASE FETCH ====================
+
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<ApiResponse<T>> {
   try {
     const url = `${API_BASE}${endpoint}`;
-    console.log('Fetching:', url, options?.method || 'GET');
-    
+    console.log(`[API] ${options?.method || 'GET'} ${url}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(url, {
       ...options,
+      signal: controller.signal,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
         ...options?.headers,
       },
     });
-    
+
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('HTTP Error:', response.status, errorText);
+      console.error(`[API Error] ${response.status}:`, errorText);
+
+      let errorMessage = `خطأ في الاتصال بالخادم: ${response.status}`;
+
+      if (response.status === 404) {
+        errorMessage = 'المورد غير موجود (404)';
+      } else if (response.status === 500) {
+        errorMessage = 'خطأ في الخادم الداخلي (500)';
+      } else if (response.status === 400) {
+        errorMessage = 'طلب غير صالح (400)';
+      }
+
       return {
         success: false,
-        error: `خطأ في الاتصال بالخادم: ${response.status}`,
+        error: errorMessage,
       };
     }
-    
+
     const data = await response.json();
-    console.log('Response:', data);
-    
-    return data;
+    console.log('[API Response]:', data);
+
+    if (data && typeof data.success === 'boolean') {
+      return data as ApiResponse<T>;
+    }
+
+    return {
+      success: true,
+      data: data as T,
+    };
+
   } catch (error) {
-    console.error('Fetch Error:', error);
+    console.error('[API Fetch Error]:', error);
+
+    let errorMessage = 'فشل في الاتصال بالخادم';
+
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      errorMessage = 'لا يمكن الاتصال بالخادم. تأكد من أن الخادم يعمل على ' + API_BASE;
+    } else if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'انتهت مهلة الاتصال بالخادم';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'فشل في الاتصال بالخادم',
+      error: errorMessage,
     };
   }
 }
 
-// API Roots
+// ==================== API ROOTS ====================
+
 export async function getRoots(): Promise<ApiResponse<Root[]>> {
   return fetchApi<Root[]>('/api/roots');
 }
 
 export async function addRoot(value: string): Promise<ApiResponse<Root>> {
-  if (!isValidRoot(value)) {
+  const normalizedValue = normalizeArabic(value);
+
+  if (!isValidRoot(normalizedValue)) {
     return {
       success: false,
-      error: 'الجذر يجب أن يكون 3 أحرف عربية فقط',
+      error: 'الجذر يجب أن يكون 3 أحرف عربية فقط (بدون حروف إضافية)',
     };
   }
-  
+
   return fetchApi<Root>('/api/roots', {
     method: 'POST',
-    body: JSON.stringify({ value }),
+    body: JSON.stringify({ value: normalizedValue }),
   });
 }
 
-// CORRECTION: Envoyer la valeur du root au lieu de l'ID
-export async function deleteRoot(rootValue: string): Promise<ApiResponse<void>> {
-  return fetchApi<void>(`/api/roots/${encodeURIComponent(rootValue)}`, {
+export async function deleteRoot(value: string): Promise<ApiResponse<void>> {
+  const normalizedValue = normalizeArabic(value);
+  return fetchApi<void>(`/api/roots/${encodeURIComponent(normalizedValue)}`, {
     method: 'DELETE',
   });
 }
 
-// API Schemes
+// ==================== API SCHEMES ====================
+
 export async function getSchemes(): Promise<ApiResponse<Scheme[]>> {
   return fetchApi<Scheme[]>('/api/schemes');
 }
 
-export async function addScheme(scheme: { name: string; pattern: string; rule?: string }): Promise<ApiResponse<Scheme>> {
-  if (!isArabicText(scheme.name)) {
+export async function addScheme(scheme: {
+  name: string;
+  pattern: string;
+  rule?: string
+}): Promise<ApiResponse<Scheme>> {
+  const normalizedName = normalizeArabic(scheme.name);
+  const normalizedPattern = normalizeArabic(scheme.pattern);
+
+  if (!isArabicText(normalizedName)) {
     return {
       success: false,
-      error: 'اسم الوزن يجب أن يكون بالعربية',
+      error: 'اسم الوزن يجب أن يكون بالعربية فقط',
     };
   }
-  
-  // Validation: le pattern doit contenir ف، ع، ل
-  const validPattern = scheme.pattern.includes('ف') && 
-                       scheme.pattern.includes('ع') && 
-                       scheme.pattern.includes('ل');
-  
-  if (!validPattern) {
+
+  const hasFa = normalizedPattern.includes('ف');
+  const hasAin = normalizedPattern.includes('ع');
+  const hasLam = normalizedPattern.includes('ل');
+
+  if (!hasFa || !hasAin || !hasLam) {
     return {
       success: false,
-      error: 'القاعدة يجب أن تحتوي على ف، ع، ل',
+      error: 'القاعدة يجب أن تحتوي على حروف ف، ع، ل (مثل: فَعَلَ)',
     };
   }
-  
+
   return fetchApi<Scheme>('/api/schemes', {
     method: 'POST',
     body: JSON.stringify({
-      name: scheme.name,
-      pattern: scheme.pattern,
-      description: scheme.rule || scheme.pattern,
+      name: normalizedName,
+      pattern: normalizedPattern,
+      description: scheme.rule ? normalizeArabic(scheme.rule) : normalizedPattern,
     }),
   });
 }
 
-// NOUVEAU: Supprimer un schéma
-export async function deleteScheme(name: string): Promise<ApiResponse<void>> {
-  return fetchApi<void>(`/api/schemes/${encodeURIComponent(name)}`, {
-    method: 'DELETE',
-  });
-}
+// ==================== API GENERATION ====================
 
-// NOUVEAU: Modifier un schéma
-export async function updateScheme(
-  name: string, 
-  updates: { pattern?: string; description?: string }
-): Promise<ApiResponse<Scheme>> {
-  return fetchApi<Scheme>(`/api/schemes/${encodeURIComponent(name)}`, {
-    method: 'PUT',
-    body: JSON.stringify(updates),
-  });
-}
-
-// API Generation - CORRECTION: envoyer schemes comme tableau
 export async function generateWords(
-  root: string, 
+  root: string,
   selectedSchemes?: string[]
 ): Promise<ApiResponse<GenerateResponse>> {
-  if (!isValidRoot(root)) {
+  const normalizedRoot = normalizeArabic(root);
+
+  if (!isValidRoot(normalizedRoot)) {
     return {
       success: false,
-      error: 'الرجاء إدخال جذر عربي من 3 أحرف',
+      error: 'الرجاء إدخال جذر عربي صحيح من 3 أحرف (مثل: كتب، فعل)',
     };
   }
-  
-  const body: any = { root };
+
+  const body: any = { root: normalizedRoot };
+
   if (selectedSchemes && selectedSchemes.length > 0) {
-    // Envoyer comme tableau JSON au lieu de string
-    body.schemes = selectedSchemes;
+    body.schemes = selectedSchemes.map(s => normalizeArabic(s));
   }
-  
+
   return fetchApi<GenerateResponse>('/api/generate', {
     method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
-// API Validation
-export async function validateWord(word: string, root: string): Promise<ApiResponse<ValidationResult>> {
-  if (!isArabicText(word)) {
+// ==================== API VALIDATION - CORRIGÉ ====================
+
+export async function validateWord(
+  word: string,
+  root: string
+): Promise<ApiResponse<ValidationResult>> {
+  const normalizedWord = normalizeArabic(word);
+  const normalizedRoot = normalizeArabic(root);
+
+  if (!normalizedWord) {
     return {
       success: false,
-      error: 'الكلمة يجب أن تكون بالعربية فقط',
+      error: 'الرجاء إدخال كلمة للتحقق',
     };
   }
-  if (!isValidRoot(root)) {
+
+  if (!isArabicText(normalizedWord)) {
     return {
       success: false,
-      error: 'الجذر يجب أن يكون 3 أحرف عربية',
+      error: 'الكلمة يجب أن تحتوي على حروف عربية فقط',
     };
   }
-  
-  return fetchApi<ValidationResult>('/api/validate', {
+
+  if (!isValidRoot(normalizedRoot)) {
+    return {
+      success: false,
+      error: 'الجذر يجب أن يكون 3 أحرف عربية (مثل: كتب، فعل، لعب)',
+    };
+  }
+
+  const response = await fetchApi<ValidationResult>('/api/validate', {
     method: 'POST',
-    body: JSON.stringify({ word, root }),
+    body: JSON.stringify({
+      word: normalizedWord,
+      root: normalizedRoot
+    }),
   });
+
+  // CORRECTION CRITIQUE: Convertir valid en boolean de manière robuste
+  if (response.data) {
+    const validValue = response.data.valid;
+    let isValid = false;
+
+    if (typeof validValue === 'boolean') {
+      isValid = validValue;
+    } else if (typeof validValue === 'string') {
+      const lowerValue = validValue.toLowerCase().trim();
+      isValid = ['true', '1', 'yes', 'valid', 'صحيح', 'نعم'].includes(lowerValue);
+    } else if (typeof validValue === 'number') {
+      isValid = validValue === 1 || validValue > 0;
+    }
+
+    response.data.valid = isValid;
+
+    if (!response.data.message) {
+      response.data.message = isValid ? 'الكلمة صحيحة' : 'الكلمة غير صحيحة';
+    }
+
+    console.log('[Validation] Résultat:', isValid, '| Mot:', normalizedWord, '| Racine:', normalizedRoot);
+  }
+
+  return response;
 }
 
-// API Game
-export async function getGameQuestions(): Promise<ApiResponse<{ questions: GameQuestion[]; total: number; pool: number }>> {
+// ==================== API GAME - CORRIGÉ ====================
+
+export async function getGameQuestions(): Promise<ApiResponse<{
+  questions: GameQuestion[];
+  total: number;
+  pool: number;
+}>> {
   return fetchApi('/api/game/start');
 }
 
-export async function submitAnswer(questionId: number, answer: string): Promise<ApiResponse<{ correct: boolean; correctAnswer: string }>> {
+export async function submitAnswer(
+  questionId: number,
+  answer: string
+): Promise<ApiResponse<{ correct: boolean; correctAnswer: string }>> {
   return fetchApi('/api/game/answer', {
     method: 'POST',
-    body: JSON.stringify({ questionId: questionId.toString(), answer }),
+    body: JSON.stringify({
+      questionId: questionId.toString(),
+      answer: normalizeArabic(answer)
+    }),
   });
 }
+
+// ==================== UTILITAIRES EXPORTÉS ====================
+
+export const apiUtils = {
+  isArabicText,
+  isValidRoot,
+  normalizeArabic,
+};
+
+export default {
+  getRoots,
+  addRoot,
+  deleteRoot,
+  getSchemes,
+  addScheme,
+  generateWords,
+  validateWord,
+  getGameQuestions,
+  submitAnswer,
+};

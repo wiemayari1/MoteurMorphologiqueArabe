@@ -1,0 +1,10 @@
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/moteur_cli.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/moteur_tui.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/morpho_api_server.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/moteur_tests.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/edit_cache.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/list_install_components.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/install.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/install/local.dir
+/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/CMakeFiles/install/strip.dir

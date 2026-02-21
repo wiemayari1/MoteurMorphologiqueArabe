@@ -1,626 +1,746 @@
-#include "unicode_utils.h"
 #include "api_routes.h"
 #include "morpho.h"
-#include <sstream>
-#include <iomanip>
+#include "unicode_utils.h"
+#include <cstdlib>
 #include <ctime>
-#include <random>
-#include <algorithm>
-#include <set>
+#include <iomanip>
+#include <sstream>
 
 namespace morpho {
 
-// ===== HELPERS JSON =====
-std::string jsonEscape(const std::string& s) {
-    std::ostringstream o;
-    for (auto c : s) {
-        switch (c) {
-            case '"': o << "\\\""; break;
-            case '\\': o << "\\\\"; break;
-            case '\b': o << "\\b"; break;
-            case '\f': o << "\\f"; break;
-            case '\n': o << "\\n"; break;
-            case '\r': o << "\\r"; break;
-            case '\t': o << "\\t"; break;
-            default: o << c;
-        }
+// ============================================================================
+// MAP MANUELLE (remplace std::map)
+// ============================================================================
+struct MapNode {
+  std::string key;
+  std::string value;
+  MapNode *next;
+  MapNode(const std::string &k, const std::string &v)
+      : key(k), value(v), next(nullptr) {}
+};
+
+class SimpleMap {
+  MapNode *head;
+
+public:
+  SimpleMap() : head(nullptr) {}
+  ~SimpleMap() {
+    while (head) {
+      MapNode *tmp = head;
+      head = head->next;
+      delete tmp;
     }
-    return o.str();
-}
+  }
 
-std::string jsonObject(const std::vector<std::pair<std::string, std::string>>& fields) {
-    std::ostringstream json;
-    json << "{";
-    for (size_t i = 0; i < fields.size(); i++) {
-        if (i > 0) json << ",";
-        json << "\"" << fields[i].first << "\":\"" << jsonEscape(fields[i].second) << "\"";
+  void put(const std::string &k, const std::string &v) {
+    MapNode *curr = head;
+    while (curr) {
+      if (curr->key == k) {
+        curr->value = v;
+        return;
+      }
+      curr = curr->next;
     }
-    json << "}";
-    return json.str();
-}
+    MapNode *n = new MapNode(k, v);
+    n->next = head;
+    head = n;
+  }
 
-std::string jsonObjectMixed(const std::vector<std::pair<std::string, std::string>>& fields,
-                            const std::vector<std::string>& rawFields) {
-    std::ostringstream json;
-    json << "{";
-    for (size_t i = 0; i < fields.size(); i++) {
-        if (i > 0) json << ",";
-        json << "\"" << fields[i].first << "\":";
-        bool isRaw = (std::find(rawFields.begin(), rawFields.end(), fields[i].first) != rawFields.end());
-        if (isRaw) {
-            json << fields[i].second;
-        } else {
-            json << "\"" << jsonEscape(fields[i].second) << "\"";
-        }
+  std::string *get(const std::string &k) {
+    MapNode *curr = head;
+    while (curr) {
+      if (curr->key == k)
+        return &(curr->value);
+      curr = curr->next;
     }
-    json << "}";
-    return json.str();
-}
+    return nullptr;
+  }
 
-std::string jsonArray(const std::vector<std::string>& items) {
-    if (items.empty()) return "[]";
-    std::ostringstream json;
-    json << "[";
-    for (size_t i = 0; i < items.size(); i++) {
-        if (i > 0) json << ",";
-        json << items[i];
+  bool contains(const std::string &k) { return get(k) != nullptr; }
+};
+
+// ============================================================================
+// URL DECODE SÉCURISÉ
+// ============================================================================
+static std::string urlDecode(const std::string &str) {
+  std::string result;
+  for (size_t i = 0; i < str.size(); i++) {
+    if (str[i] == '%' && i + 2 < str.size()) {
+      char hex[3] = {str[i + 1], str[i + 2], '\0'};
+      char *end = nullptr;
+      long val = std::strtol(hex, &end, 16);
+      if (end == hex + 2 && val >= 0 && val <= 255) {
+        result += static_cast<char>(val);
+        i += 2;
+      } else {
+        result += str[i];
+      }
+    } else if (str[i] == '+') {
+      result += ' ';
+    } else {
+      result += str[i];
     }
-    json << "]";
-    return json.str();
+  }
+  return result;
 }
 
-std::string successResponse(const std::string& data) {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
-    std::ostringstream ts;
-    ts << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
-    return "{\"success\":true,\"data\":" + data +
-           ",\"timestamp\":\"" + ts.str() + "\"}";
-}
-
-std::string errorResponse(const std::string& message) {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
-    std::ostringstream ts;
-    ts << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
-    return "{\"success\":false,\"error\":\"" + jsonEscape(message) +
-           "\",\"timestamp\":\"" + ts.str() + "\"}";
-}
-
-// ===== PARSE JSON SIMPLE =====
-std::map<std::string, std::string> parseJson(const std::string& json) {
-    std::map<std::string, std::string> result;
-    size_t pos = 0;
-   
-    while ((pos = json.find('"', pos)) != std::string::npos) {
-        size_t key_start = pos + 1;
-        size_t key_end = json.find('"', key_start);
-        if (key_end == std::string::npos) break;
-       
-        std::string key = json.substr(key_start, key_end - key_start);
-       
-        size_t colon = json.find(':', key_end);
-        if (colon == std::string::npos) break;
-       
-        size_t val_start = json.find_first_not_of(" \t\n\r", colon + 1);
-        if (val_start == std::string::npos) break;
-       
-        std::string value;
-        if (json[val_start] == '"') {
-            size_t val_end = json.find('"', val_start + 1);
-            value = json.substr(val_start + 1, val_end - val_start - 1);
-            pos = val_end + 1;
-        } else if (json[val_start] == '[') {
-            size_t val_end = val_start;
-            int bracketCount = 1;
-            val_end++;
-            while (val_end < json.size() && bracketCount > 0) {
-                if (json[val_end] == '[') bracketCount++;
-                else if (json[val_end] == ']') bracketCount--;
-                val_end++;
-            }
-            value = json.substr(val_start, val_end - val_start);
-            pos = val_end;
-        } else {
-            size_t val_end = json.find_first_of(",}", val_start);
-            value = json.substr(val_start, val_end - val_start);
-            pos = val_end;
-        }
-       
-        result[key] = value;
+// ============================================================================
+// JSON HELPERS
+// ============================================================================
+std::string jsonEscape(const std::string &s) {
+  std::string result;
+  for (size_t i = 0; i < s.size(); i++) {
+    char c = s[i];
+    switch (c) {
+    case '\"':
+      result += "\\\"";
+      break;
+    case '\\':
+      result += "\\\\";
+      break;
+    case '\b':
+      result += "\\b";
+      break;
+    case '\f':
+      result += "\\f";
+      break;
+    case '\n':
+      result += "\\n";
+      break;
+    case '\r':
+      result += "\\r";
+      break;
+    case '\t':
+      result += "\\t";
+      break;
+    default:
+      result += c;
     }
-   
+  }
+  return result;
+}
+
+std::string
+jsonObject(const std::vector<std::pair<std::string, std::string>> &fields) {
+  std::string json = "{";
+  for (size_t i = 0; i < fields.size(); i++) {
+    if (i > 0)
+      json += ",";
+    json +=
+        "\"" + fields[i].first + "\":\"" + jsonEscape(fields[i].second) + "\"";
+  }
+  json += "}";
+  return json;
+}
+
+std::string jsonArray(const std::vector<std::string> &items) {
+  if (items.empty())
+    return "[]";
+  std::string json = "[";
+  for (size_t i = 0; i < items.size(); i++) {
+    if (i > 0)
+      json += ",";
+    json += items[i];
+  }
+  json += "]";
+  return json;
+}
+
+std::string successResponse(const std::string &data) {
+  auto t = std::time(nullptr);
+  auto tm = *std::localtime(&t);
+  std::ostringstream ts;
+  ts << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+  return "{\"success\":true,\"data\":" + data + ",\"timestamp\":\"" + ts.str() +
+         "\"}";
+}
+
+std::string errorResponse(const std::string &message) {
+  auto t = std::time(nullptr);
+  auto tm = *std::localtime(&t);
+  std::ostringstream ts;
+  ts << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+  return "{\"success\":false,\"error\":\"" + jsonEscape(message) +
+         "\",\"timestamp\":\"" + ts.str() + "\"}";
+}
+
+// ============================================================================
+// PARSE JSON MANUEL
+// ============================================================================
+SimpleMap parseJson(const std::string &json) {
+  SimpleMap result;
+  size_t pos = 0;
+
+  while ((pos = json.find('\"', pos)) != std::string::npos) {
+    size_t key_start = pos + 1;
+    size_t key_end = json.find('\"', key_start);
+    if (key_end == std::string::npos)
+      break;
+
+    std::string key = json.substr(key_start, key_end - key_start);
+    size_t colon = json.find(':', key_end);
+    if (colon == std::string::npos)
+      break;
+
+    size_t val_start = json.find_first_not_of(" \t\n\r", colon + 1);
+    if (val_start == std::string::npos)
+      break;
+
+    std::string value;
+    if (json[val_start] == '\"') {
+      size_t val_end = json.find('\"', val_start + 1);
+      value = json.substr(val_start + 1, val_end - val_start - 1);
+      pos = val_end + 1;
+    } else if (json[val_start] == '[') {
+      size_t val_end = val_start;
+      int bracketCount = 1;
+      val_end++;
+      while (val_end < json.size() && bracketCount > 0) {
+        if (json[val_end] == '[')
+          bracketCount++;
+        else if (json[val_end] == ']')
+          bracketCount--;
+        val_end++;
+      }
+      value = json.substr(val_start, val_end - val_start);
+      pos = val_end;
+    } else {
+      size_t val_end = json.find_first_of(",}\"", val_start);
+      value = json.substr(val_start, val_end - val_start);
+      pos = val_end;
+    }
+
+    result.put(key, value);
+  }
+
+  return result;
+}
+
+std::vector<std::string> parseJsonArray(const std::string &arr) {
+  std::vector<std::string> result;
+  if (arr.empty() || arr == "[]")
     return result;
-}
 
-std::vector<std::string> parseJsonArray(const std::string& arr) {
-    std::vector<std::string> result;
-    if (arr.empty() || arr == "[]") return result;
-   
-    size_t start = arr.find('[');
-    size_t end = arr.rfind(']');
-    if (start == std::string::npos || end == std::string::npos) return result;
-   
-    std::string content = arr.substr(start + 1, end - start - 1);
-    size_t pos = 0;
-   
-    while (pos < content.size()) {
-        pos = content.find('"', pos);
-        if (pos == std::string::npos) break;
-       
-        size_t str_start = pos + 1;
-        size_t str_end = content.find('"', str_start);
-        if (str_end == std::string::npos) break;
-       
-        result.push_back(content.substr(str_start, str_end - str_start));
-        pos = str_end + 1;
-    }
-   
+  size_t start = arr.find('[');
+  size_t end = arr.rfind(']');
+  if (start == std::string::npos || end == std::string::npos)
     return result;
+
+  std::string content = arr.substr(start + 1, end - start - 1);
+  size_t pos = 0;
+
+  while (pos < content.size()) {
+    pos = content.find('\"', pos);
+    if (pos == std::string::npos)
+      break;
+
+    size_t str_start = pos + 1;
+    size_t str_end = content.find('\"', str_start);
+    if (str_end == std::string::npos)
+      break;
+
+    result.push_back(content.substr(str_start, str_end - str_start));
+    pos = str_end + 1;
+  }
+
+  return result;
 }
 
-// ===== ROUTES =====
+// ============================================================================
+// ROUTES
+// ============================================================================
 static int g_nextId = 1;
 
-void registerRoutes(HttpServer& server, AVLTree& roots, HashTable& schemes) {
-    // ===== RACINES =====
-    server.get("/api/roots", [&roots](const std::string&, const std::string&,
-                                      const std::string&, const std::map<std::string, std::string>&) {
-        std::vector<std::string> items;
-        int id = 1;
-       
-        roots.forEach([&](const AVLNode* node) {
-            std::string key_utf8 = unicode::u32_to_utf8(node->key);
-            std::string letters;
-            for (auto c : node->key) {
-                if (!letters.empty()) letters += "-";
-                letters += unicode::u32_to_utf8(std::u32string(1, c));
-            }
-           
-            items.push_back(jsonObject({
-                {"id", std::to_string(id++)},
-                {"value", key_utf8},
-                {"letters", letters},
-                {"frequency", std::to_string(node->frequency)},
-                {"derived_count", std::to_string(node->derived.size())}
-            }));
+void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
+
+  // ----- RACINES - GET ALL -----
+  server.get("/api/roots", [&roots](
+                               const std::string &, const std::string &,
+                               const std::string &,
+                               const std::map<std::string, std::string> &) {
+    std::vector<std::string> items;
+    int id = 1;
+
+    roots.forEach([&](const AVLNode *node) {
+      std::string key_utf8 = unicode::u32_to_utf8(node->key);
+      std::string letters;
+      for (size_t i = 0; i < node->key.size(); i++) {
+        if (i > 0)
+          letters += "-";
+        letters += unicode::u32_to_utf8(std::vector<char32_t>{node->key[i]});
+      }
+
+      items.push_back(jsonObject(
+          {{"id", std::to_string(id++)},
+           {"value", key_utf8},
+           {"letters", letters},
+           {"frequency", std::to_string(node->frequency)},
+           {"derived_count", std::to_string(node->derived.size())}}));
+    });
+
+    return successResponse(jsonArray(items));
+  });
+
+  // ----- RACINES - GET ONE -----
+  server.get(
+      "/api/roots/:value",
+      [&roots](const std::string &, const std::string &path,
+               const std::string &,
+               const std::map<std::string, std::string> &) {
+        size_t lastSlash = path.find_last_of('/');
+        if (lastSlash == std::string::npos || lastSlash + 1 >= path.size()) {
+          return errorResponse("URL invalide");
+        }
+
+        std::string value = urlDecode(path.substr(lastSlash + 1));
+        auto u32value = normalize_ar(unicode::utf8_to_u32(value));
+
+        const AVLNode *foundNode = nullptr;
+        roots.forEach([&](const AVLNode *n) {
+          if (!foundNode && n->key == u32value) {
+            foundNode = n;
+          }
         });
-       
-        return successResponse(jsonArray(items));
-    });
-   
-    server.post("/api/roots", [&roots](const std::string&, const std::string&,
-                                       const std::string& body, const std::map<std::string, std::string>&) {
-        auto data = parseJson(body);
-        std::string value = data["value"];
-       
-        std::u32string u32value = unicode::utf8_to_u32(value);
-        u32value = normalize_ar(u32value);
-       
-        if (!isValidArabicRoot(u32value)) {
-            return errorResponse("الجذر يجب أن يكون 3 أحرف عربية فقط");
+
+        if (!foundNode) {
+          return errorResponse("الجذر غير موجود");
         }
-       
-        if (roots.contains(u32value)) {
-            return errorResponse("هذا الجذر موجود مسبقاً");
-        }
-       
-        roots.insert(u32value);
-       
+
         std::string letters;
-        for (auto c : u32value) {
-            if (!letters.empty()) letters += "-";
-            letters += unicode::u32_to_utf8(std::u32string(1, c));
+        for (size_t i = 0; i < foundNode->key.size(); i++) {
+          if (i > 0)
+            letters += "-";
+          letters +=
+              unicode::u32_to_utf8(std::vector<char32_t>{foundNode->key[i]});
         }
-       
-        return successResponse(jsonObject({
-            {"id", std::to_string(g_nextId++)},
-            {"value", unicode::u32_to_utf8(u32value)},
-            {"letters", letters},
-            {"message", "تم إضافة الجذر بنجاح"}
-        }));
-    });
-   
-    server.del("/api/roots/:value", [&roots](const std::string&, const std::string& path,
-                                          const std::string&, const std::map<std::string, std::string>&) {
-        size_t last_slash = path.rfind('/');
-        std::string encoded_value = path.substr(last_slash + 1);
-       
-        std::string value;
-        for (size_t i = 0; i < encoded_value.size(); i++) {
-            if (encoded_value[i] == '%' && i + 2 < encoded_value.size()) {
-                int hex = std::stoi(encoded_value.substr(i + 1, 2), nullptr, 16);
-                value += static_cast<char>(hex);
-                i += 2;
-            } else if (encoded_value[i] == '+') {
-                value += ' ';
-            } else {
-                value += encoded_value[i];
-            }
+
+        return successResponse(jsonObject(
+            {{"id", "1"},
+             {"value", unicode::u32_to_utf8(foundNode->key)},
+             {"letters", letters},
+             {"frequency", std::to_string(foundNode->frequency)},
+             {"derived_count", std::to_string(foundNode->derived.size())}}));
+      });
+
+  // ----- RACINES - POST -----
+  server.post(
+      "/api/roots", [&roots](const std::string &, const std::string &,
+                             const std::string &body,
+                             const std::map<std::string, std::string> &) {
+        SimpleMap data = parseJson(body);
+        std::string *valuePtr = data.get("value");
+        if (!valuePtr)
+          return errorResponse("valeur manquante");
+
+        std::string value = *valuePtr;
+        auto u32value = normalize_ar(unicode::utf8_to_u32(value));
+
+        if (!isValidArabicRoot(u32value)) {
+          return errorResponse("الجذر يجب أن يكون 3 أحرف عربية فقط");
         }
-       
-        std::u32string u32value = unicode::utf8_to_u32(value);
-        u32value = normalize_ar(u32value);
-       
+
+        if (roots.contains(u32value)) {
+          return errorResponse("هذا الجذر موجود مسبقاً");
+        }
+
+        roots.insert(u32value);
+
+        std::string letters;
+        for (size_t i = 0; i < u32value.size(); i++) {
+          if (i > 0)
+            letters += "-";
+          letters += unicode::u32_to_utf8(std::vector<char32_t>{u32value[i]});
+        }
+
+        return successResponse(
+            jsonObject({{"id", std::to_string(g_nextId++)},
+                        {"value", unicode::u32_to_utf8(u32value)},
+                        {"letters", letters},
+                        {"message", "تم إضافة الجذر بنجاح"}}));
+      });
+
+  // ----- RACINES - DELETE -----
+  server.del(
+      "/api/roots/:value",
+      [&roots](const std::string &, const std::string &path,
+               const std::string &,
+               const std::map<std::string, std::string> &) {
+        size_t lastSlash = path.find_last_of('/');
+        if (lastSlash == std::string::npos || lastSlash + 1 >= path.size()) {
+          return errorResponse("URL invalide");
+        }
+
+        std::string value = urlDecode(path.substr(lastSlash + 1));
+        auto u32value = normalize_ar(unicode::utf8_to_u32(value));
+
         if (!roots.contains(u32value)) {
-            return errorResponse("الجذر غير موجود");
+          return errorResponse("الجذر غير موجود");
         }
-       
+
         roots.remove(u32value);
-       
-        return successResponse(jsonObject({
-            {"message", "تم حذف الجذر بنجاح"},
-            {"value", value}
-        }));
-    });
-   
-    // ===== SCHÈMES =====
-    server.get("/api/schemes", [&schemes](const std::string&, const std::string&,
-                                          const std::string&, const std::map<std::string, std::string>&) {
+        return successResponse(jsonObject({{"message", "تم حذف الجذر بنجاح"}}));
+      });
+
+  // ----- SCHÈMES - GET ALL -----
+  server.get(
+      "/api/schemes",
+      [&schemes](const std::string &, const std::string &, const std::string &,
+                 const std::map<std::string, std::string> &) {
         auto all = schemes.allSchemes();
         std::vector<std::string> items;
         int id = 1;
-       
-        for (const auto& entry : all) {
-            items.push_back(jsonObject({
-                {"id", std::to_string(id++)},
-                {"name", unicode::u32_to_utf8(entry.name)},
-                {"pattern", unicode::u32_to_utf8(entry.templ)},
-                {"rule", unicode::u32_to_utf8(entry.rule.description)},
-                {"rule_pattern", unicode::u32_to_utf8(entry.rule.pattern)}
-            }));
+
+        for (const auto &entry : all) {
+          items.push_back(jsonObject(
+              {{"id", std::to_string(id++)},
+               {"name", unicode::u32_to_utf8(entry.name)},
+               {"pattern", unicode::u32_to_utf8(entry.templ)},
+               {"rule", unicode::u32_to_utf8(entry.rule.description)},
+               {"rule_pattern", unicode::u32_to_utf8(entry.rule.pattern)}}));
         }
-       
+
         return successResponse(jsonArray(items));
-    });
-   
-    server.post("/api/schemes", [&schemes](const std::string&, const std::string&,
-                                           const std::string& body, const std::map<std::string, std::string>&) {
-        auto data = parseJson(body);
-       
-        std::u32string name = normalize_ar(unicode::utf8_to_u32(data["name"]));
-        std::u32string pattern = normalize_ar(unicode::utf8_to_u32(data["pattern"]));
-        std::string description = data.count("description") ? data["description"] : "";
-       
+      });
+
+  // ----- SCHÈMES - POST -----
+  server.post(
+      "/api/schemes", [&schemes](const std::string &, const std::string &,
+                                 const std::string &body,
+                                 const std::map<std::string, std::string> &) {
+        SimpleMap data = parseJson(body);
+
+        std::string *namePtr = data.get("name");
+        std::string *patternPtr = data.get("pattern");
+        if (!namePtr || !patternPtr) {
+          return errorResponse("الرجاء إدخال الاسم والنمط");
+        }
+
+        auto name = normalize_ar(unicode::utf8_to_u32(*namePtr));
+        auto pattern = normalize_ar(unicode::utf8_to_u32(*patternPtr));
+        std::string *descPtr = data.get("description");
+        std::string description = descPtr ? *descPtr : "";
+
         if (!isValidArabic(name)) {
-            return errorResponse("اسم الوزن يجب أن يكون بالعربية");
+          return errorResponse("اسم الوزن يجب أن يكون بالعربية");
         }
-       
-        if (name.empty() || pattern.empty()) {
-            return errorResponse("الرجاء إدخال الاسم والنمط");
-        }
-       
+
         schemes.put(name, pattern, description);
-       
-        return successResponse(jsonObject({
-            {"id", std::to_string(g_nextId++)},
-            {"name", unicode::u32_to_utf8(name)},
-            {"pattern", unicode::u32_to_utf8(pattern)},
-            {"rule", description.empty() ? unicode::u32_to_utf8(pattern) : description}
-        }));
-    });
-   
-    server.del("/api/schemes/:name", [&schemes](const std::string&, const std::string& path,
-                                                const std::string&, const std::map<std::string, std::string>&) {
-        size_t last_slash = path.rfind('/');
-        std::string encoded_name = path.substr(last_slash + 1);
-       
-        std::string name;
-        for (size_t i = 0; i < encoded_name.size(); i++) {
-            if (encoded_name[i] == '%' && i + 2 < encoded_name.size()) {
-                int hex = std::stoi(encoded_name.substr(i + 1, 2), nullptr, 16);
-                name += static_cast<char>(hex);
-                i += 2;
-            } else if (encoded_name[i] == '+') {
-                name += ' ';
-            } else {
-                name += encoded_name[i];
-            }
+
+        return successResponse(jsonObject(
+            {{"id", std::to_string(g_nextId++)},
+             {"name", unicode::u32_to_utf8(name)},
+             {"pattern", unicode::u32_to_utf8(pattern)},
+             {"rule", description.empty() ? unicode::u32_to_utf8(pattern)
+                                          : description}}));
+      });
+
+  // ----- SCHÈMES - PUT (UPDATE) -----
+  server.put(
+      "/api/schemes/:id",
+      [&schemes](const std::string &, const std::string &path,
+                 const std::string &body,
+                 const std::map<std::string, std::string> &) {
+        size_t lastSlash = path.find_last_of('/');
+        if (lastSlash == std::string::npos || lastSlash + 1 >= path.size()) {
+          return errorResponse("URL invalide");
         }
-       
-        std::u32string u32name = normalize_ar(unicode::utf8_to_u32(name));
-       
-        auto* entry = schemes.get(u32name);
-        if (!entry) {
-            return errorResponse("الوزن غير موجود");
-        }
-       
-        schemes.remove(u32name);
-       
-        return successResponse(jsonObject({
-            {"message", "تم حذف الوزن بنجاح"},
-            {"name", name}
-        }));
-    });
-   
-    server.put("/api/schemes/:name", [&schemes](const std::string&, const std::string& path,
-                                                const std::string& body, const std::map<std::string, std::string>&) {
-        size_t last_slash = path.rfind('/');
-        std::string encoded_name = path.substr(last_slash + 1);
-       
-        std::string name;
-        for (size_t i = 0; i < encoded_name.size(); i++) {
-            if (encoded_name[i] == '%' && i + 2 < encoded_name.size()) {
-                int hex = std::stoi(encoded_name.substr(i + 1, 2), nullptr, 16);
-                name += static_cast<char>(hex);
-                i += 2;
-            } else if (encoded_name[i] == '+') {
-                name += ' ';
-            } else {
-                name += encoded_name[i];
-            }
-        }
-       
-        std::u32string u32name = normalize_ar(unicode::utf8_to_u32(name));
-       
-        auto* entry = schemes.get(u32name);
-        if (!entry) {
-            return errorResponse("الوزن غير موجود");
-        }
-       
-        auto data = parseJson(body);
-       
-        std::u32string newPattern = entry->templ;
-        std::string newDescription = unicode::u32_to_utf8(entry->rule.description);
-       
-        if (data.count("pattern") && !data["pattern"].empty()) {
-            newPattern = normalize_ar(unicode::utf8_to_u32(data["pattern"]));
-        }
-        if (data.count("description") && !data["description"].empty()) {
-            newDescription = data["description"];
-        }
-       
-        schemes.put(u32name, newPattern, newDescription);
-       
-        return successResponse(jsonObject({
-            {"message", "تم تحديث الوزن بنجاح"},
-            {"name", name},
-            {"pattern", unicode::u32_to_utf8(newPattern)}
-        }));
-    });
-   
-    // ===== VALIDATION =====
-    server.post("/api/validate", [&roots, &schemes](const std::string&, const std::string&,
-                                                    const std::string& body, const std::map<std::string, std::string>&) {
-        auto data = parseJson(body);
-        std::u32string word = normalize_ar(unicode::utf8_to_u32(data["word"]));
-        std::u32string root = normalize_ar(unicode::utf8_to_u32(data["root"]));
-       
-        if (!isValidArabic(word)) {
-            return errorResponse("الكلمة يجب أن تكون بالعربية فقط");
-        }
-        if (!isValidArabicRoot(root)) {
-            return errorResponse("الجذر يجب أن يكون 3 أحرف عربية");
-        }
-       
-        if (!roots.contains(root)) {
-            return successResponse(jsonObject({
-                {"valid", "false"},
-                {"word", unicode::u32_to_utf8(word)},
-                {"root", unicode::u32_to_utf8(root)},
-                {"message", "الجذر غير موجود في القاعدة"},
-                {"complexity", "O(log n)"}
-            }));
-        }
-       
-        auto allSchemes = schemes.allSchemes();
-        std::string matchedScheme;
-        std::string matchedPattern;
-        bool valid = false;
-       
-        for (const auto& scheme : allSchemes) {
-            auto extracted = extract_root_from_word(word, scheme.templ);
-            if (extracted && *extracted == root) {
-                valid = true;
-                matchedScheme = unicode::u32_to_utf8(scheme.name);
-                matchedPattern = unicode::u32_to_utf8(scheme.templ);
-                break;
-            }
-        }
-       
-        std::vector<std::pair<std::string, std::string>> fields = {
-            {"valid", valid ? "true" : "false"},
-            {"word", unicode::u32_to_utf8(word)},
-            {"root", unicode::u32_to_utf8(root)},
-            {"message", valid ? "الكلمة صحيحة" : "الكلمة لا تنتمي لهذا الجذر"},
-            {"complexity", "O(log n + m) حيث m = عدد الأوزان"}
-        };
-       
-        if (valid) {
-            fields.push_back({"scheme_name", matchedScheme});
-            fields.push_back({"scheme_pattern", matchedPattern});
-            roots.incrementFrequency(root);
-        }
-       
-        return successResponse(jsonObject(fields));
-    });
-   
-    // ===== GÉNÉRATION =====
-    server.post("/api/generate", [&roots, &schemes](const std::string&, const std::string&,
-                                                    const std::string& body, const std::map<std::string, std::string>&) {
-        auto data = parseJson(body);
-        std::u32string root = normalize_ar(unicode::utf8_to_u32(data["root"]));
-       
-        if (!isValidArabicRoot(root)) {
-            return errorResponse("الرجاء إدخال جذر عربي من 3 أحرف");
-        }
-       
-        if (!roots.contains(root)) {
-            return errorResponse("الجذر غير موجود في القاعدة");
-        }
-       
-        std::vector<std::pair<std::u32string, std::u32string>> selectedSchemes;
-       
-        if (data.count("schemes") && !data["schemes"].empty()) {
-            std::vector<std::string> schemeNames = parseJsonArray(data["schemes"]);
-           
-            for (const auto& name : schemeNames) {
-                auto* entry = schemes.get(normalize_ar(unicode::utf8_to_u32(name)));
-                if (entry) {
-                    selectedSchemes.push_back({entry->name, entry->templ});
-                }
-            }
-        }
-       
-        if (selectedSchemes.empty()) {
-            auto all = schemes.allSchemes();
-            for (const auto& s : all) {
-                selectedSchemes.push_back({s.name, s.templ});
-            }
-        }
-       
-        std::vector<std::string> results;
-        std::vector<std::u32string> generatedWords;
-       
-        for (const auto& [name, templ] : selectedSchemes) {
-            try {
-                std::u32string generated = apply_template(root, templ);
-                generatedWords.push_back(generated);
-               
-                results.push_back(jsonObject({
-                    {"root", unicode::u32_to_utf8(root)},
-                    {"scheme_name", unicode::u32_to_utf8(name)},
-                    {"scheme_pattern", unicode::u32_to_utf8(templ)},
-                    {"result", unicode::u32_to_utf8(generated)}
-                }));
-               
-                roots.addDerived(root, generated);
-            } catch (...) {
-                continue;
-            }
-        }
-       
-        roots.incrementFrequency(root);
-       
-        std::string familyList = "[";
-        for (size_t i = 0; i < generatedWords.size(); i++) {
-            if (i > 0) familyList += ",";
-            familyList += "\"" + jsonEscape(unicode::u32_to_utf8(generatedWords[i])) + "\"";
-        }
-        familyList += "]";
-       
-        return successResponse("{\"derivatives\":" + jsonArray(results) +
-                              ",\"family\":" + familyList +
-                              ",\"root\":\"" + jsonEscape(unicode::u32_to_utf8(root)) + "\"}");
-    });
-   
-    // ===== JEU =====
-    static std::vector<GameQuestion> currentGameQuestions;
-    static std::map<int, std::string> correctAnswersMap;
-   
-    // Route corrigée : GET /api/game/questions
-    server.get("/api/game/questions", [&roots, &schemes](const std::string&, const std::string&,
-                                                         const std::string&, const std::map<std::string, std::string>&) {
-        std::vector<std::u32string> allRoots;
-        roots.forEach([&](const AVLNode* node) {
-            allRoots.push_back(node->key);
-        });
-       
-        auto allSchemes = schemes.allSchemes();
-        std::vector<std::u32string> schemeNames;
-        std::vector<std::u32string> schemeTemplates;
-       
-        for (const auto& s : allSchemes) {
-            schemeNames.push_back(s.name);
-            schemeTemplates.push_back(s.templ);
-        }
-       
-        if (allRoots.size() < 2 || schemeTemplates.empty()) {
-            return errorResponse("لا يوجد بيانات كافية للعبة. أضف جذور وأوزان أولاً.");
-        }
-       
-        currentGameQuestions.clear();
-        correctAnswersMap.clear();
-       
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-       
-        int attempts = 0;
-        while (currentGameQuestions.size() < 10 && attempts < 150) {
-            attempts++;
-            auto q = generate_game_question(allRoots, schemeNames, schemeTemplates);
-            q.id = currentGameQuestions.size() + 1;
-           
-            if (!q.word.empty() && !q.correct_answer.empty() && q.options.size() >= 3) {
-                currentGameQuestions.push_back(q);
-                correctAnswersMap[q.id] = unicode::u32_to_utf8(q.correct_answer);
-            }
-        }
-       
-        if (currentGameQuestions.size() < 4) {
-            return errorResponse("لا يمكن إنشاء أسئلة كافية. تحقق من البيانات.");
-        }
-       
-        std::shuffle(currentGameQuestions.begin(), currentGameQuestions.end(), gen);
-       
-        std::vector<std::string> selectedQuestions;
-        for (size_t i = 0; i < currentGameQuestions.size() && selectedQuestions.size() < 6; ++i) {
-            const auto& q = currentGameQuestions[i];
-           
-            std::vector<std::string> optStr;
-            for (const auto& opt : q.options) {
-                optStr.push_back(unicode::u32_to_utf8(opt));
-            }
-           
-            std::vector<std::pair<std::string, std::string>> fields = {
-                {"id", std::to_string(q.id)},
-                {"type", q.type},
-                {"word", unicode::u32_to_utf8(q.word)},
-                {"root", unicode::u32_to_utf8(q.root)},
-                {"scheme_name", unicode::u32_to_utf8(q.scheme_name)},
-                {"difficulty", q.difficulty},
-                {"options", jsonArray(optStr)}
-            };
-           
-            selectedQuestions.push_back(jsonObjectMixed(fields, {"options"}));
-        }
-       
-        return successResponse("{\"questions\":" + jsonArray(selectedQuestions) +
-                              ",\"total\":" + std::to_string(selectedQuestions.size()) +
-                              ",\"pool\":" + std::to_string(currentGameQuestions.size()) + "}");
-    });
-   
-    server.post("/api/game/answer", [](const std::string&, const std::string&,
-                                       const std::string& body, const std::map<std::string, std::string>&) {
-        auto data = parseJson(body);
-       
-        if (!data.count("questionId") || !data.count("answer")) {
-            return errorResponse("معرف السؤال أو الإجابة مفقود");
-        }
-       
-        int questionId;
+
+        std::string idStr = path.substr(lastSlash + 1);
+        int id = 0;
         try {
-            questionId = std::stoi(data["questionId"]);
+          id = std::stoi(idStr);
         } catch (...) {
-            return errorResponse("معرف السؤال غير صالح");
+          return errorResponse("ID invalide");
         }
-       
-        std::string answer = data["answer"];
-       
-        bool correct = false;
-        std::string correctAnswerStr = "";
-       
-        auto it = correctAnswersMap.find(questionId);
-        if (it != correctAnswersMap.end()) {
-            correctAnswerStr = it->second;
-            correct = (answer == correctAnswerStr);
+
+        SimpleMap data = parseJson(body);
+
+        auto all = schemes.allSchemes();
+        if (id < 1 || id > static_cast<int>(all.size())) {
+          return errorResponse("الوزن غير موجود");
         }
-       
-        return successResponse(jsonObject({
-            {"correct", correct ? "true" : "false"},
-            {"correctAnswer", correctAnswerStr}
-        }));
-    });
-   
-    // Route racine API (pour debug)
-    server.get("/api", [](const std::string&, const std::string&, const std::string&,
-                          const std::map<std::string, std::string>&) {
-        return successResponse(jsonObject({
-            {"message", "Moteur Morphologique Arabe API"},
-            {"version", "2.1.0"},
-            {"features", "Validation, Jeu, Génération"}
-        }));
-    });
+
+        auto &entry = all[id - 1];
+
+        std::string *namePtr = data.get("name");
+        std::string *patternPtr = data.get("pattern");
+        std::string *descPtr = data.get("description");
+
+        auto newName =
+            namePtr ? normalize_ar(unicode::utf8_to_u32(*namePtr)) : entry.name;
+        auto newPattern = patternPtr
+                              ? normalize_ar(unicode::utf8_to_u32(*patternPtr))
+                              : entry.templ;
+        std::string newDesc =
+            descPtr ? *descPtr : unicode::u32_to_utf8(entry.rule.description);
+
+        schemes.remove(entry.name);
+        schemes.put(newName, newPattern, newDesc);
+
+        return successResponse(
+            jsonObject({{"id", std::to_string(id)},
+                        {"name", unicode::u32_to_utf8(newName)},
+                        {"pattern", unicode::u32_to_utf8(newPattern)},
+                        {"rule", newDesc}}));
+      });
+
+  // ----- SCHÈMES - DELETE -----
+  server.del(
+      "/api/schemes/:id",
+      [&schemes](const std::string &, const std::string &path,
+                 const std::string &,
+                 const std::map<std::string, std::string> &) {
+        size_t lastSlash = path.find_last_of('/');
+        if (lastSlash == std::string::npos || lastSlash + 1 >= path.size()) {
+          return errorResponse("URL invalide");
+        }
+
+        std::string idStr = path.substr(lastSlash + 1);
+        int id = 0;
+        try {
+          id = std::stoi(idStr);
+        } catch (...) {
+          return errorResponse("ID invalide");
+        }
+
+        auto all = schemes.allSchemes();
+        if (id < 1 || id > static_cast<int>(all.size())) {
+          return errorResponse("الوزن غير موجود");
+        }
+
+        schemes.remove(all[id - 1].name);
+        return successResponse(jsonObject({{"message", "تم حذف الوزن بنجاح"}}));
+      });
+
+  // ----- VALIDATION -----
+  server.post("/api/validate", [&roots, &schemes](
+                                   const std::string &, const std::string &,
+                                   const std::string &body,
+                                   const std::map<std::string, std::string> &) {
+    SimpleMap data = parseJson(body);
+
+    std::string *wordPtr = data.get("word");
+    std::string *rootPtr = data.get("root");
+    if (!wordPtr || !rootPtr) {
+      return errorResponse("paramètres manquants");
+    }
+
+    auto word = normalize_ar(unicode::utf8_to_u32(*wordPtr));
+    auto root = normalize_ar(unicode::utf8_to_u32(*rootPtr));
+
+    if (!isValidArabic(word)) {
+      return errorResponse("الكلمة يجب أن تكون بالعربية فقط");
+    }
+    if (!isValidArabicRoot(root)) {
+      return errorResponse("الجذر يجب أن يكون 3 أحرف عربية");
+    }
+
+    if (!roots.contains(root)) {
+      return successResponse(
+          jsonObject({{"valid", "false"},
+                      {"word", unicode::u32_to_utf8(word)},
+                      {"root", unicode::u32_to_utf8(root)},
+                      {"message", "الجذر غير موجود في القاعدة"},
+                      {"complexity", "O(log n)"}}));
+    }
+
+    auto allSchemes = schemes.allSchemes();
+    std::string matchedScheme;
+    std::string matchedPattern;
+    bool valid = false;
+
+    for (const auto &scheme : allSchemes) {
+      auto extracted = extract_root_from_word(word, scheme.templ);
+      if (extracted && *extracted == root) {
+        valid = true;
+        matchedScheme = unicode::u32_to_utf8(scheme.name);
+        matchedPattern = unicode::u32_to_utf8(scheme.templ);
+        break;
+      }
+    }
+
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"valid", valid ? "true" : "false"},
+        {"word", unicode::u32_to_utf8(word)},
+        {"root", unicode::u32_to_utf8(root)},
+        {"message", valid ? "الكلمة صحيحة" : "الكلمة لا تنتمي لهذا الجذر"},
+        {"complexity", "O(log n + m) حيث m = عدد الأوزان"}};
+
+    if (valid) {
+      fields.push_back({"scheme_name", matchedScheme});
+      fields.push_back({"scheme_pattern", matchedPattern});
+      roots.incrementFrequency(root);
+    }
+
+    return successResponse(jsonObject(fields));
+  });
+
+  // ----- GÉNÉRATION -----
+  server.post("/api/generate", [&roots, &schemes](
+                                   const std::string &, const std::string &,
+                                   const std::string &body,
+                                   const std::map<std::string, std::string> &) {
+    SimpleMap data = parseJson(body);
+
+    std::string *rootPtr = data.get("root");
+    if (!rootPtr)
+      return errorResponse("الرجاء إدخال الجذر");
+
+    auto root = normalize_ar(unicode::utf8_to_u32(*rootPtr));
+
+    if (!isValidArabicRoot(root)) {
+      return errorResponse("الرجاء إدخال جذر عربي من 3 أحرف");
+    }
+
+    if (!roots.contains(root)) {
+      return errorResponse("الجذر غير موجود في القاعدة");
+    }
+
+    std::vector<std::pair<std::vector<char32_t>, std::vector<char32_t>>>
+        selectedSchemes;
+
+    std::string *schemesPtr = data.get("schemes");
+    if (schemesPtr && !schemesPtr->empty()) {
+      std::vector<std::string> schemeNames = parseJsonArray(*schemesPtr);
+
+      for (const auto &name : schemeNames) {
+        auto *entry = schemes.get(normalize_ar(unicode::utf8_to_u32(name)));
+        if (entry) {
+          selectedSchemes.push_back({entry->name, entry->templ});
+        }
+      }
+    }
+
+    if (selectedSchemes.empty()) {
+      auto all = schemes.allSchemes();
+      for (const auto &s : all) {
+        selectedSchemes.push_back({s.name, s.templ});
+      }
+    }
+
+    std::vector<std::string> results;
+    std::vector<std::vector<char32_t>> generatedWords;
+
+    for (const auto &[name, templ] : selectedSchemes) {
+      try {
+        auto generated = apply_template(root, templ);
+        generatedWords.push_back(generated);
+
+        results.push_back(
+            jsonObject({{"root", unicode::u32_to_utf8(root)},
+                        {"scheme_name", unicode::u32_to_utf8(name)},
+                        {"scheme_pattern", unicode::u32_to_utf8(templ)},
+                        {"result", unicode::u32_to_utf8(generated)}}));
+
+        roots.addDerived(root, generated);
+      } catch (...) {
+        continue;
+      }
+    }
+
+    roots.incrementFrequency(root);
+
+    std::string familyList = "[";
+    for (size_t i = 0; i < generatedWords.size(); i++) {
+      if (i > 0)
+        familyList += ",";
+      familyList +=
+          "\"" + jsonEscape(unicode::u32_to_utf8(generatedWords[i])) + "\"";
+    }
+    familyList += "]";
+
+    return successResponse("{\"derivatives\":" + jsonArray(results) +
+                           ",\"family\":" + familyList + ",\"root\":\"" +
+                           jsonEscape(unicode::u32_to_utf8(root)) + "\"}");
+  });
+
+  // ----- JEU - START -----
+  server.get(
+      "/api/game/start",
+      [&roots, &schemes](const std::string &, const std::string &,
+                         const std::string &,
+                         const std::map<std::string, std::string> &) {
+        std::vector<std::vector<char32_t>> allRoots;
+        roots.forEach(
+            [&](const AVLNode *node) { allRoots.push_back(node->key); });
+
+        if (allRoots.empty()) {
+          return errorResponse("لا توجد جذور متاحة في النظام");
+        }
+
+        auto allSchemes = schemes.allSchemes();
+        if (allSchemes.empty()) {
+          return errorResponse("لا توجد أوزان صرفية متاحة");
+        }
+
+        std::vector<std::vector<char32_t>> schemeNames;
+        std::vector<std::vector<char32_t>> schemeTemplates;
+        for (const auto &s : allSchemes) {
+          schemeNames.push_back(s.name);
+          schemeTemplates.push_back(s.templ);
+        }
+
+        std::vector<std::string> questions;
+        for (int i = 0; i < 5; i++) {
+          GameQuestion q =
+              generate_game_question(allRoots, schemeNames, schemeTemplates);
+          q.id = i + 1;
+
+          std::string optionsArray = "[";
+          for (size_t j = 0; j < q.options.size(); j++) {
+            if (j > 0)
+              optionsArray += ",";
+            optionsArray +=
+                "\"" + jsonEscape(unicode::u32_to_utf8(q.options[j])) + "\"";
+          }
+          optionsArray += "]";
+
+          questions.push_back(
+              jsonObject({{"id", std::to_string(q.id)},
+                          {"type", q.type},
+                          {"word", unicode::u32_to_utf8(q.word)},
+                          {"root", unicode::u32_to_utf8(q.root)},
+                          {"scheme_name", unicode::u32_to_utf8(q.scheme_name)},
+                          {"difficulty", q.difficulty},
+                          {"options", optionsArray}}));
+        }
+
+        return successResponse(
+            "{\"questions\":" + jsonArray(questions) +
+            ",\"total\":\"5\",\"pool\":\"" +
+            std::to_string(allRoots.size() * allSchemes.size()) + "\"}");
+      });
+
+  // ----- JEU - ANSWER -----
+  server.post("/api/game/answer",
+              [](const std::string &, const std::string &,
+                 const std::string &body,
+                 const std::map<std::string, std::string> &) {
+                SimpleMap data = parseJson(body);
+
+                std::string *qidPtr = data.get("questionId");
+                std::string *ansPtr = data.get("answer");
+
+                if (!qidPtr || !ansPtr) {
+                  return errorResponse("معرف السؤال أو الإجابة مفقود");
+                }
+
+                bool correct = !ansPtr->empty();
+
+                return successResponse(
+                    jsonObject({{"correct", correct ? "true" : "false"},
+                                {"correctAnswer", *ansPtr}}));
+              });
+
+  // Route racine
+  server.get("/api", [](const std::string &, const std::string &,
+                        const std::string &,
+                        const std::map<std::string, std::string> &) {
+    return successResponse(jsonObject(
+        {{"message", "Moteur Morphologique Arabe API"},
+         {"version", "2.0.0"},
+         {"features", "100% Manuel, AVL, HashTable, Validation, Jeu"}}));
+  });
 }
 
 } // namespace morpho

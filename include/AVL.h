@@ -5,51 +5,48 @@
 #include <string>
 #include <vector>
 
+// ============================================================================
+// Nœud AVL avec gestion des dérivés
+// ============================================================================
 struct AVLNode {
-  std::u32string key;                  // racine (ex: "كتب")
-  std::vector<std::u32string> derived; // dérivés validés
-  int frequency; // fréquence (nombre de validations/générations)
+  std::vector<char32_t> key;
+  std::vector<std::vector<char32_t>> derived;
+  int frequency;
   AVLNode *left;
   AVLNode *right;
   int height;
 
-  AVLNode(const std::u32string &k)
+  AVLNode(const std::vector<char32_t> &k)
       : key(k), frequency(0), left(nullptr), right(nullptr), height(1) {}
 };
 
+// ============================================================================
+// Arbre AVL équilibré
+// ============================================================================
 class AVLTree {
 public:
   AVLTree() : root(nullptr) {}
-  ~AVLTree(); // Destructeur pour libérer la mémoire
+  ~AVLTree();
 
-  void insert(const std::u32string &root);
-  void remove(const std::u32string &root); // ✅ Added remove
-  bool contains(const std::u32string &root) const;
+  void insert(const std::vector<char32_t> &root);
+  void remove(const std::vector<char32_t> &root);
+  bool contains(const std::vector<char32_t> &root) const;
 
-  // Incrémente la fréquence d'une racine (utilisé lors d'une
-  // validation/génération)
-  void incrementFrequency(const std::u32string &key);
+  void incrementFrequency(const std::vector<char32_t> &key);
+  void addDerived(const std::vector<char32_t> &root_key,
+                  const std::vector<char32_t> &derived);
 
-  // Ajoute un dérivé validé à une racine
-  void addDerived(const std::u32string &root_key,
-                  const std::u32string &derived);
-
-  // Parcours infixe et callback sur chaque nœud
   void forEach(std::function<void(const AVLNode *)> callback) const;
-
-  // Retourne toutes les racines
-  std::vector<std::u32string> getAllKeys() const;
-
-  // Même chose, mais avec callback direct
+  std::vector<std::vector<char32_t>> getAllKeys() const;
   void getAllKeys(const std::function<void(const AVLNode *)> &callback) const;
 
 private:
   AVLNode *root;
 
-  AVLNode *insert(AVLNode *node, const std::u32string &key);
-  AVLNode *remove(AVLNode *node, const std::u32string &key,
-                  bool &deleted); // ✅ Added helper
-  AVLNode *find(AVLNode *node, const std::u32string &key) const;
+  AVLNode *insert(AVLNode *node, const std::vector<char32_t> &key);
+  AVLNode *remove(AVLNode *node, const std::vector<char32_t> &key,
+                  bool &deleted);
+  AVLNode *find(AVLNode *node, const std::vector<char32_t> &key) const;
 
   int height(AVLNode *node) const;
   int getBalance(AVLNode *node) const;

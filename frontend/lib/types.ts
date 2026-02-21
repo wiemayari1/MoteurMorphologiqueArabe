@@ -22,7 +22,7 @@ export interface GeneratedWord {
 }
 
 export interface ValidationResult {
-  valid: boolean;
+  valid: boolean | string;
   word: string;
   root: string;
   message: string;

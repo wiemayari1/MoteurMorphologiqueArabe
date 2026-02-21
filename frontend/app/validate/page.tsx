@@ -38,14 +38,19 @@ export default function ValidatePage() {
     setResult(null);
 
     const response = await validateWord(word, root);
-    
+
     if (response.success && response.data) {
       setResult(response.data);
     } else {
       setError(response.error || "فشل في التحقق");
     }
-    
+
     setLoading(false);
+  };
+
+  // Helper pour vérifier si c'est valide (gère boolean et string)
+  const isValid = (valid: boolean | string | undefined): boolean => {
+    return valid === true || valid === "true";
   };
 
   return (
@@ -82,7 +87,7 @@ export default function ValidatePage() {
                 className="text-lg text-right"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 text-right font-arabic">
                 الجذر المقترح (3 أحرف)
@@ -107,8 +112,8 @@ export default function ValidatePage() {
             </Alert>
           )}
 
-          <Button 
-            onClick={handleValidate} 
+          <Button
+            onClick={handleValidate}
             disabled={loading || !word || root.length !== 3}
             className="w-full gap-2 text-lg"
             size="lg"
@@ -125,21 +130,19 @@ export default function ValidatePage() {
 
           {/* Result */}
           {result && (
-            <div className={`p-6 rounded-xl border-2 animate-fade-in ${
-              result.valid 
-                ? "bg-green-50 border-green-200" 
+            <div className={`p-6 rounded-xl border-2 animate-fade-in ${isValid(result.valid)
+                ? "bg-green-50 border-green-200"
                 : "bg-red-50 border-red-200"
-            }`}>
+              }`}>
               <div className="text-center mb-4">
-                {result.valid ? (
+                {isValid(result.valid) ? (
                   <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-2" />
                 ) : (
                   <XCircle className="w-16 h-16 text-red-500 mx-auto mb-2" />
                 )}
-                <h3 className={`text-2xl font-bold font-arabic ${
-                  result.valid ? "text-green-800" : "text-red-800"
-                }`}>
-                  {result.valid ? "✅ نعم، الكلمة صحيحة" : "❌ لا، الكلمة غير صحيحة"}
+                <h3 className={`text-2xl font-bold font-arabic ${isValid(result.valid) ? "text-green-800" : "text-red-800"
+                  }`}>
+                  {isValid(result.valid) ? "✅ نعم، الكلمة صحيحة" : "❌ لا، الكلمة غير صحيحة"}
                 </h3>
               </div>
 
@@ -152,8 +155,8 @@ export default function ValidatePage() {
                   <span className="font-bold text-gray-700">{result.root}</span>
                   <span className="text-gray-500">الجذر</span>
                 </div>
-                
-                {result.valid && result.scheme_name && (
+
+                {isValid(result.valid) && result.scheme_name && (
                   <>
                     <div className="flex justify-between items-center">
                       <Badge variant="default" className="font-arabic text-lg">
@@ -169,7 +172,7 @@ export default function ValidatePage() {
                     </div>
                   </>
                 )}
-                
+
                 <div className="pt-2 border-t mt-2">
                   <p className="text-xs text-gray-400 text-center font-mono">
                     {result.complexity}
