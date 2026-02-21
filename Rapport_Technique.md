@@ -1,12 +1,5 @@
 # Rapport Technique - Moteur Morphologique Arabe
 
-**Année universitaire :** 2025-2026  
-**Enseignants responsables :** Narjes Ben Hariz, Sahbi Bahroun  
-**Niveau :** 1ING  
-**Module :** Algorithmique et Structures de Données
-
----
-
 ## 1. Introduction
 Ce projet a pour objectif de développer un moteur morphologique pour la langue arabe, capable d'analyser et de générer des mots à partir de racines trilitères et de schèmes. Il repose sur des structures de données avancées pour garantir performance et robustesse.
 
