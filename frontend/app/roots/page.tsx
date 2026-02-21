@@ -1,3 +1,4 @@
+// frontend/app/roots/page.tsx - VERSION CORRIGÉE AVEC ID
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,7 +20,7 @@ export default function RootsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [inputError, setInputError] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null); // ← number, pas string
 
   useEffect(() => {
     loadRoots();
@@ -72,17 +73,17 @@ export default function RootsPage() {
     setAdding(false);
   };
 
-  // CORRECTION: Utiliser la valeur du root au lieu de l'ID
-  const handleDelete = async (rootValue: string) => {
-    if (!confirm(`هل أنت متأكد من حذف الجذر "${rootValue}"؟`)) {
+  // CORRECTION: Utiliser l'ID (number) au lieu de la valeur (string)
+  const handleDelete = async (id: number, value: string) => {
+    if (!confirm(`هل أنت متأكد من حذف الجذر "${value}"؟`)) {
       return;
     }
 
-    setDeletingId(rootValue);
+    setDeletingId(id);
     setError("");
     setSuccess("");
 
-    const response = await deleteRoot(rootValue);
+    const response = await deleteRoot(id); // ← ID, pas value !
     if (response.success) {
       setSuccess("تم حذف الجذر بنجاح");
       await loadRoots();
@@ -104,16 +105,16 @@ export default function RootsPage() {
         <CardContent className="space-y-6">
           {/* Add Root */}
           <div className="flex gap-2">
-            <Button 
-              onClick={loadRoots} 
-              variant="outline" 
+            <Button
+              onClick={loadRoots}
+              variant="outline"
               size="icon"
               disabled={loading}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
-            <Button 
-              onClick={handleAdd} 
+            <Button
+              onClick={handleAdd}
               disabled={adding || !!inputError || newRoot.length !== 3}
               className="gap-2"
             >
@@ -160,7 +161,7 @@ export default function RootsPage() {
                   loadRoots();
                   return;
                 }
-                setRoots(prev => prev.filter(r => 
+                setRoots(prev => prev.filter(r =>
                   r.value.includes(term) || r.letters.includes(term)
                 ));
               }}
@@ -178,7 +179,7 @@ export default function RootsPage() {
                 <span>العدد: {roots.length}</span>
                 <span>جذر</span>
               </div>
-              
+
               {roots.map((root, index) => (
                 <div
                   key={root.id}
@@ -189,17 +190,17 @@ export default function RootsPage() {
                       variant="ghost"
                       size="icon"
                       className="text-red-400 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => handleDelete(root.value)}
-                      disabled={deletingId === root.value}
+                      onClick={() => handleDelete(root.id, root.value)} // ← ID + value !
+                      disabled={deletingId === root.id}
                     >
-                      {deletingId === root.value ? (
+                      {deletingId === root.id ? (
                         <span className="animate-spin text-xs">⏳</span>
                       ) : (
                         <Trash2 className="w-4 h-4" />
                       )}
                     </Button>
                   </div>
-                  
+
                   <div className="text-right flex-1 mr-4">
                     <p className="text-xl font-bold text-teal-900 font-arabic">
                       {root.value}
@@ -208,7 +209,7 @@ export default function RootsPage() {
                       {root.letters}
                     </p>
                   </div>
-                  
+
                   <Badge variant="secondary" className="ml-2">
                     {index + 1}
                   </Badge>

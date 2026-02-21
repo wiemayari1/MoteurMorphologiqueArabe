@@ -1,4 +1,4 @@
-// frontend/app/game/page.tsx - VERSION CORRIGÉE COMPLÈTE
+// frontend/app/game/page.tsx - VERSION CORRIGÉE
 "use client";
 
 import { useEffect, useState } from "react";
@@ -42,15 +42,35 @@ export default function GamePage() {
 
     try {
       const response = await getGameQuestions();
-      console.log("Game response:", response);
+      console.log("=== REPONSE COMPLETE API ===", response);
 
-      if (response.success && response.data && response.data.questions && response.data.questions.length > 0) {
-        // Vérifier et normaliser les questions pour s'assurer que options est toujours un tableau
-        const normalizedQuestions = response.data.questions.map((q: any) => ({
-          ...q,
-          options: Array.isArray(q.options) ? q.options : []
-        }));
-        setQuestions(normalizedQuestions);
+      if (response.success && response.data?.questions?.length > 0) {
+        const normalizedQuestions = response.data.questions.map((q: any, idx: number) => {
+          let opts = q.options;
+
+          if (typeof opts === 'string') {
+            try {
+              opts = JSON.parse(opts);
+            } catch (e) {
+              console.error(`Question ${idx}: erreur parsing options`, opts);
+              opts = [];
+            }
+          }
+
+          return {
+            ...q,
+            id: typeof q.id === 'string' ? parseInt(q.id) : q.id,
+            options: Array.isArray(opts) ? opts : []
+          };
+        });
+
+        const validQuestions = normalizedQuestions.filter((q: any) => q.options.length > 0);
+
+        if (validQuestions.length === 0) {
+          setError("جميع الأسئلة المستلمة لا تحتوي على خيارات صالحة");
+        } else {
+          setQuestions(validQuestions);
+        }
       } else {
         setError(response.error || "فشل في تحميل الأسئلة. تأكد من وجود جذور وأوزان في النظام.");
       }
@@ -69,27 +89,43 @@ export default function GamePage() {
     setSelectedAnswer(answer);
     setChecking(true);
 
-    console.log("Submitting answer:", currentQuestion.id, answer);
-
     try {
       const response = await submitAnswer(currentQuestion.id, answer);
       console.log("Answer response:", response);
 
-      const isCorrect = response.data?.correct || false;
-      const correctAnswer = response.data?.correctAnswer || answer;
+      if (response.success && response.data) {
+        // CORRECTION: Garantir que correct est un boolean
+        const correctValue = response.data.correct;
+        let isCorrect = false;
 
-      setAnswers(prev => [...prev, {
-        questionId: currentQuestion.id,
-        selected: answer,
-        correct: isCorrect,
-        correctAnswer: correctAnswer
-      }]);
+        if (typeof correctValue === 'boolean') {
+          isCorrect = correctValue;
+        } else if (typeof correctValue === 'string') {
+          isCorrect = correctValue.toLowerCase() === 'true' || correctValue === '1';
+        } else if (typeof correctValue === 'number') {
+          isCorrect = correctValue === 1;
+        }
+
+        setAnswers(prev => [...prev, {
+          questionId: currentQuestion.id,
+          selected: answer,
+          correct: isCorrect,
+          correctAnswer: response.data.correctAnswer || answer
+        }]);
+      } else {
+        setAnswers(prev => [...prev, {
+          questionId: currentQuestion.id,
+          selected: answer,
+          correct: false,
+          correctAnswer: answer
+        }]);
+      }
     } catch (err) {
       console.error("Error submitting answer:", err);
       setAnswers(prev => [...prev, {
         questionId: currentQuestion.id,
         selected: answer,
-        correct: true,
+        correct: false,
         correctAnswer: answer
       }]);
     }
@@ -225,21 +261,7 @@ export default function GamePage() {
 
   const context = getQuestionContext(currentQuestion);
   const currentAnswer = answers.find(a => a.questionId === currentQuestion.id);
-
-  // Vérification défensive des options
-  const options = Array.isArray(currentQuestion.options) ? currentQuestion.options : [];
-
-  // Si pas d'options, afficher un message d'erreur
-  if (options.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Alert variant="error">خطأ في بيانات السؤال: لا توجد خيارات متاحة</Alert>
-        <Button onClick={handleNext} className="mt-4 w-full">
-          تخطي هذا السؤال
-        </Button>
-      </div>
-    );
-  }
+  const options = currentQuestion.options || [];
 
   return (
     <div className="max-w-2xl mx-auto animate-slide-up">
@@ -282,33 +304,39 @@ export default function GamePage() {
             <p className="text-gray-600 font-arabic">{context.sub}</p>
           </div>
 
-          <div className={`grid gap-3 ${currentQuestion.type === 'validate_word' ? 'grid-cols-2' : 'grid-cols-2'}`}>
-            {options.map((option, index) => {
-              let buttonClass = "h-16 text-xl font-arabic transition-all ";
+          {options.length === 0 ? (
+            <Alert variant="error">لا توجد خيارات لهذا السؤال</Alert>
+          ) : (
+            <div className="grid gap-3 grid-cols-2">
+              {options.map((option, index) => {
+                let buttonClass = "h-16 text-xl font-arabic transition-all ";
 
-              if (!currentAnswer) {
-                buttonClass += "bg-white hover:bg-teal-50 border-2 border-gray-200 hover:border-teal-300";
-              } else if (option === currentAnswer.correctAnswer) {
-                buttonClass += "bg-green-100 border-2 border-green-500 text-green-800";
-              } else if (option === currentAnswer.selected) {
-                buttonClass += "bg-red-100 border-2 border-red-500 text-red-800";
-              } else {
-                buttonClass += "bg-gray-100 border-2 border-gray-200 opacity-50";
-              }
+                if (!currentAnswer) {
+                  buttonClass += "bg-white hover:bg-teal-50 border-2 border-gray-200 hover:border-teal-300";
+                } else if (option === currentAnswer.correctAnswer) {
+                  buttonClass += "bg-green-100 border-2 border-green-500 text-green-800";
+                } else if (option === currentAnswer.selected && !currentAnswer.correct) {
+                  buttonClass += "bg-red-100 border-2 border-red-500 text-red-800";
+                } else if (option === currentAnswer.selected && currentAnswer.correct) {
+                  buttonClass += "bg-green-100 border-2 border-green-500 text-green-800";
+                } else {
+                  buttonClass += "bg-gray-100 border-2 border-gray-200 opacity-50";
+                }
 
-              return (
-                <Button
-                  key={index}
-                  onClick={() => handleAnswer(option)}
-                  disabled={!!currentAnswer || checking}
-                  className={buttonClass}
-                  variant="ghost"
-                >
-                  {option}
-                </Button>
-              );
-            })}
-          </div>
+                return (
+                  <Button
+                    key={index}
+                    onClick={() => handleAnswer(option)}
+                    disabled={!!currentAnswer || checking}
+                    className={buttonClass}
+                    variant="ghost"
+                  >
+                    {option}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
 
           {currentAnswer && (
             <div className={`p-4 rounded-lg ${currentAnswer.correct ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"

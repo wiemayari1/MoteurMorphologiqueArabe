@@ -1,3 +1,4 @@
+// frontend/app/schemes/page.tsx - VERSION CORRIGÉE AVEC ID
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,7 +20,7 @@ export default function SchemesPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState({ pattern: "", description: "" });
+  const [editData, setEditData] = useState({ name: "", pattern: "", rule: "" });
 
   useEffect(() => {
     loadSchemes();
@@ -67,7 +68,8 @@ export default function SchemesPage() {
     setAdding(false);
   };
 
-  const handleDelete = async (name: string) => {
+  // CORRECTION: Utiliser l'ID (number) au lieu du nom (string)
+  const handleDelete = async (id: number, name: string) => {
     if (!confirm(`هل أنت متأكد من حذف الوزن "${name}"؟`)) {
       return;
     }
@@ -75,7 +77,7 @@ export default function SchemesPage() {
     setError("");
     setSuccess("");
 
-    const response = await deleteScheme(name);
+    const response = await deleteScheme(id); // ← ID, pas name !
     if (response.success) {
       setSuccess("تم حذف الوزن بنجاح");
       await loadSchemes();
@@ -87,21 +89,38 @@ export default function SchemesPage() {
   const startEdit = (scheme: Scheme) => {
     setEditingId(scheme.id);
     setEditData({
+      name: scheme.name,
       pattern: scheme.pattern,
-      description: scheme.rule
+      rule: scheme.rule
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditData({ pattern: "", description: "" });
+    setEditData({ name: "", pattern: "", rule: "" });
   };
 
-  const handleUpdate = async (name: string) => {
+  // CORRECTION: Utiliser l'ID (number) au lieu du nom (string)
+  const handleUpdate = async (id: number) => {
     setError("");
     setSuccess("");
 
-    const response = await updateScheme(name, editData);
+    // Validation
+    if (!isArabicText(editData.name)) {
+      setError("اسم الوزن يجب أن يكون بالعربية");
+      return;
+    }
+    if (!validatePattern(editData.pattern)) {
+      setError("القاعدة يجب أن تحتوي على ف، ع، ل");
+      return;
+    }
+
+    const response = await updateScheme(id, {
+      name: editData.name,
+      pattern: editData.pattern,
+      rule: editData.rule
+    });
+
     if (response.success) {
       setSuccess("تم تحديث الوزن بنجاح");
       setEditingId(null);
@@ -132,8 +151,8 @@ export default function SchemesPage() {
 
           {/* Add Scheme */}
           <div className="flex gap-2 items-start">
-            <Button 
-              onClick={handleAdd} 
+            <Button
+              onClick={handleAdd}
               disabled={adding || !newScheme.name || !newScheme.pattern}
               className="gap-2 mt-0"
             >
@@ -149,19 +168,19 @@ export default function SchemesPage() {
               <Input
                 placeholder="اسم الوزن (مثال: فاعل)"
                 value={newScheme.name}
-                onChange={(e) => setNewScheme({...newScheme, name: e.target.value})}
+                onChange={(e) => setNewScheme({ ...newScheme, name: e.target.value })}
                 className="text-lg text-right"
               />
               <Input
                 placeholder="القالب (مثال: فاعل)"
                 value={newScheme.pattern}
-                onChange={(e) => setNewScheme({...newScheme, pattern: e.target.value})}
+                onChange={(e) => setNewScheme({ ...newScheme, pattern: e.target.value })}
                 className="text-lg text-right"
               />
               <Input
                 placeholder="وصف القاعدة (اختياري)"
                 value={newScheme.rule}
-                onChange={(e) => setNewScheme({...newScheme, rule: e.target.value})}
+                onChange={(e) => setNewScheme({ ...newScheme, rule: e.target.value })}
                 className="text-right text-sm"
               />
               {!validatePattern(newScheme.pattern) && newScheme.pattern && (
@@ -199,7 +218,11 @@ export default function SchemesPage() {
                       <td className="p-3 text-sm text-gray-500">{scheme.id}</td>
                       <td className="p-3 font-arabic font-bold text-teal-900">
                         {editingId === scheme.id ? (
-                          <span>{scheme.name}</span>
+                          <Input
+                            value={editData.name}
+                            onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                            className="text-sm"
+                          />
                         ) : (
                           scheme.name
                         )}
@@ -208,7 +231,7 @@ export default function SchemesPage() {
                         {editingId === scheme.id ? (
                           <Input
                             value={editData.pattern}
-                            onChange={(e) => setEditData({...editData, pattern: e.target.value})}
+                            onChange={(e) => setEditData({ ...editData, pattern: e.target.value })}
                             className="text-sm"
                           />
                         ) : (
@@ -220,8 +243,8 @@ export default function SchemesPage() {
                       <td className="p-3 text-sm text-gray-600 font-arabic">
                         {editingId === scheme.id ? (
                           <Input
-                            value={editData.description}
-                            onChange={(e) => setEditData({...editData, description: e.target.value})}
+                            value={editData.rule}
+                            onChange={(e) => setEditData({ ...editData, rule: e.target.value })}
                             className="text-sm"
                           />
                         ) : (
@@ -236,7 +259,7 @@ export default function SchemesPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-green-600 hover:text-green-800"
-                                onClick={() => handleUpdate(scheme.name)}
+                                onClick={() => handleUpdate(scheme.id)} // ← ID !
                               >
                                 <Check className="w-4 h-4" />
                               </Button>
@@ -263,7 +286,7 @@ export default function SchemesPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-red-400 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => handleDelete(scheme.name)}
+                                onClick={() => handleDelete(scheme.id, scheme.name)} // ← ID + nom !
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>

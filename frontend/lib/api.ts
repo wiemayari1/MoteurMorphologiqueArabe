@@ -1,5 +1,6 @@
 // frontend/lib/api.ts - VERSION CORRIGÉE COMPLÈTE ET FINALE
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 // ==================== INTERFACES ====================
 
 export interface ApiResponse<T> {
@@ -184,7 +185,16 @@ export async function addRoot(value: string): Promise<ApiResponse<Root>> {
   });
 }
 
-export async function deleteRoot(value: string): Promise<ApiResponse<void>> {
+// CORRECTION: Delete par ID (utilisé par le frontend)
+export async function deleteRoot(id: number): Promise<ApiResponse<void>> {
+  // Si votre backend attend une valeur au lieu d'un ID, changez ici
+  return fetchApi<void>(`/api/roots/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// Alternative: Delete par valeur si le backend l'attend
+export async function deleteRootByValue(value: string): Promise<ApiResponse<void>> {
   const normalizedValue = normalizeArabic(value);
   return fetchApi<void>(`/api/roots/${encodeURIComponent(normalizedValue)}`, {
     method: 'DELETE',
@@ -230,6 +240,60 @@ export async function addScheme(scheme: {
       pattern: normalizedPattern,
       description: scheme.rule ? normalizeArabic(scheme.rule) : normalizedPattern,
     }),
+  });
+}
+
+// CORRECTION: Update scheme par ID (manquait !)
+export async function updateScheme(
+  id: number,
+  scheme: {
+    name?: string;
+    pattern?: string;
+    rule?: string;
+  }
+): Promise<ApiResponse<Scheme>> {
+  const body: any = {};
+
+  if (scheme.name) {
+    const normalizedName = normalizeArabic(scheme.name);
+    if (!isArabicText(normalizedName)) {
+      return {
+        success: false,
+        error: 'اسم الوزن يجب أن يكون بالعربية فقط',
+      };
+    }
+    body.name = normalizedName;
+  }
+
+  if (scheme.pattern) {
+    const normalizedPattern = normalizeArabic(scheme.pattern);
+    const hasFa = normalizedPattern.includes('ف');
+    const hasAin = normalizedPattern.includes('ع');
+    const hasLam = normalizedPattern.includes('ل');
+
+    if (!hasFa || !hasAin || !hasLam) {
+      return {
+        success: false,
+        error: 'القاعدة يجب أن تحتوي على حروف ف، ع، ل (مثل: فَعَلَ)',
+      };
+    }
+    body.pattern = normalizedPattern;
+  }
+
+  if (scheme.rule) {
+    body.description = normalizeArabic(scheme.rule);
+  }
+
+  return fetchApi<Scheme>(`/api/schemes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+// CORRECTION: Delete scheme par ID (manquait !)
+export async function deleteScheme(id: number): Promise<ApiResponse<void>> {
+  return fetchApi<void>(`/api/schemes/${id}`, {
+    method: 'DELETE',
   });
 }
 
@@ -338,29 +402,59 @@ export async function submitAnswer(
   questionId: number,
   answer: string
 ): Promise<ApiResponse<{ correct: boolean; correctAnswer: string }>> {
-  return fetchApi('/api/game/answer', {
+  const response = await fetchApi<{ correct: any; correctAnswer: string }>('/api/game/answer', {
     method: 'POST',
     body: JSON.stringify({
-      questionId: questionId.toString(),
+      questionId: questionId, // Garder comme number si le backend l'attend
       answer: normalizeArabic(answer)
     }),
   });
+
+  // CORRECTION: Normaliser le boolean correct
+  if (response.data) {
+    const correctValue = response.data.correct;
+    let isCorrect = false;
+
+    if (typeof correctValue === 'boolean') {
+      isCorrect = correctValue;
+    } else if (typeof correctValue === 'string') {
+      isCorrect = correctValue.toLowerCase() === 'true' || correctValue === '1';
+    } else if (typeof correctValue === 'number') {
+      isCorrect = correctValue === 1;
+    }
+
+    // Retourner avec correct comme boolean garanti
+    return {
+      ...response,
+      data: {
+        correct: isCorrect,
+        correctAnswer: response.data.correctAnswer || answer
+      }
+    };
+  }
+
+  return response as ApiResponse<{ correct: boolean; correctAnswer: string }>;
 }
 
 // ==================== UTILITAIRES EXPORTÉS ====================
 
-export const apiUtils = {
+const apiUtils = {
   isArabicText,
   isValidRoot,
   normalizeArabic,
 };
 
+export { apiUtils };
+
 export default {
   getRoots,
   addRoot,
   deleteRoot,
+  deleteRootByValue,
   getSchemes,
   addScheme,
+  updateScheme,
+  deleteScheme,
   generateWords,
   validateWord,
   getGameQuestions,
