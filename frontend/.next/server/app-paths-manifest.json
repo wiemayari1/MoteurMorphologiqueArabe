@@ -1,0 +1,8 @@
+{
+  "/page": "app/page.js",
+  "/roots/page": "app/roots/page.js",
+  "/schemes/page": "app/schemes/page.js",
+  "/game/page": "app/game/page.js",
+  "/validate/page": "app/validate/page.js",
+  "/generate/page": "app/generate/page.js"
+}

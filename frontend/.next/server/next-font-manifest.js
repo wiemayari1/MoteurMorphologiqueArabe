@@ -1,0 +1,1 @@
+self.__NEXT_FONT_MANIFEST="{\"pages\":{},\"app\":{\"/mnt/c/Users/MSI/MoteurMorphologiqueArabe/frontend/app/layout\":[\"static/media/b261c59b2d76913d-s.p.woff2\"]},\"appUsingSizeAdjust\":true,\"pagesUsingSizeAdjust\":false}"
