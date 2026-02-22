@@ -1,9 +1,38 @@
 #include "AVL.h"
-#include <algorithm>
 
 // ============================================================================
-// Destructeur récursif
+// UTILITAIRES ALGORITHMIQUES MANUELS
 // ============================================================================
+
+static int max_int(int a, int b) { return (a > b) ? a : b; }
+
+static bool vector_equals(const std::vector<char32_t> &a,
+                          const std::vector<char32_t> &b) {
+  if (a.size() != b.size())
+    return false;
+  for (size_t i = 0; i < a.size(); i++) {
+    if (a[i] != b[i])
+      return false;
+  }
+  return true;
+}
+
+static bool vector_less(const std::vector<char32_t> &a,
+                        const std::vector<char32_t> &b) {
+  size_t min_len = (a.size() < b.size()) ? a.size() : b.size();
+  for (size_t i = 0; i < min_len; i++) {
+    if (a[i] < b[i])
+      return true;
+    if (a[i] > b[i])
+      return false;
+  }
+  return a.size() < b.size();
+}
+
+// ============================================================================
+// DESTRUCTEUR
+// ============================================================================
+
 static void destroyTree(AVLNode *n) {
   if (!n)
     return;
@@ -15,11 +44,12 @@ static void destroyTree(AVLNode *n) {
 AVLTree::~AVLTree() { destroyTree(root); }
 
 // ============================================================================
-// Helpers de hauteur et balance
+// HELPERS DE HAUTEUR ET BALANCE
 // ============================================================================
+
 static int nodeHeight(AVLNode *n) { return n ? n->height : 0; }
 
-int AVLTree::height(AVLNode *node) const { return nodeHeight(node); }
+int AVLTree::heightNode(AVLNode *node) const { return nodeHeight(node); }
 
 int AVLTree::getBalance(AVLNode *node) const {
   if (!node)
@@ -28,8 +58,9 @@ int AVLTree::getBalance(AVLNode *node) const {
 }
 
 // ============================================================================
-// Rotations
+// ROTATIONS
 // ============================================================================
+
 AVLNode *AVLTree::rotateRight(AVLNode *y) {
   AVLNode *x = y->left;
   AVLNode *T2 = x->right;
@@ -37,8 +68,8 @@ AVLNode *AVLTree::rotateRight(AVLNode *y) {
   x->right = y;
   y->left = T2;
 
-  y->height = 1 + std::max(nodeHeight(y->left), nodeHeight(y->right));
-  x->height = 1 + std::max(nodeHeight(x->left), nodeHeight(x->right));
+  y->height = 1 + max_int(nodeHeight(y->left), nodeHeight(y->right));
+  x->height = 1 + max_int(nodeHeight(x->left), nodeHeight(x->right));
 
   return x;
 }
@@ -50,45 +81,43 @@ AVLNode *AVLTree::rotateLeft(AVLNode *x) {
   y->left = x;
   x->right = T2;
 
-  x->height = 1 + std::max(nodeHeight(x->left), nodeHeight(x->right));
-  y->height = 1 + std::max(nodeHeight(y->left), nodeHeight(y->right));
+  x->height = 1 + max_int(nodeHeight(x->left), nodeHeight(x->right));
+  y->height = 1 + max_int(nodeHeight(y->left), nodeHeight(y->right));
 
   return y;
 }
 
 // ============================================================================
-// Insertion
+// INSERTION
 // ============================================================================
+
 AVLNode *AVLTree::insert(AVLNode *node, const std::vector<char32_t> &key) {
   if (!node)
     return new AVLNode(key);
 
-  if (key < node->key)
+  if (vector_less(key, node->key))
     node->left = insert(node->left, key);
-  else if (key > node->key)
+  else if (vector_less(node->key, key))
     node->right = insert(node->right, key);
   else
     return node;
 
-  node->height = 1 + std::max(nodeHeight(node->left), nodeHeight(node->right));
+  node->height = 1 + max_int(nodeHeight(node->left), nodeHeight(node->right));
+
   int balance = getBalance(node);
 
-  // Left Left
-  if (balance > 1 && key < node->left->key)
+  if (balance > 1 && vector_less(key, node->left->key))
     return rotateRight(node);
 
-  // Right Right
-  if (balance < -1 && key > node->right->key)
+  if (balance < -1 && vector_less(node->right->key, key))
     return rotateLeft(node);
 
-  // Left Right
-  if (balance > 1 && key > node->left->key) {
+  if (balance > 1 && vector_less(node->left->key, key)) {
     node->left = rotateLeft(node->left);
     return rotateRight(node);
   }
 
-  // Right Left
-  if (balance < -1 && key < node->right->key) {
+  if (balance < -1 && vector_less(key, node->right->key)) {
     node->right = rotateRight(node->right);
     return rotateLeft(node);
   }
@@ -101,16 +130,20 @@ void AVLTree::insert(const std::vector<char32_t> &key) {
 }
 
 // ============================================================================
-// Recherche
+// RECHERCHE
 // ============================================================================
+
 AVLNode *AVLTree::find(AVLNode *node, const std::vector<char32_t> &key) const {
   if (!node)
     return nullptr;
-  if (key == node->key)
+
+  if (vector_equals(key, node->key))
     return node;
-  if (key < node->key)
+
+  if (vector_less(key, node->key))
     return find(node->left, key);
-  return find(node->right, key);
+  else
+    return find(node->right, key);
 }
 
 bool AVLTree::contains(const std::vector<char32_t> &key) const {
@@ -118,12 +151,22 @@ bool AVLTree::contains(const std::vector<char32_t> &key) const {
 }
 
 // ============================================================================
-// Gestion des dérivés et fréquences
+// GESTION DES DÉRIVÉS ET FRÉQUENCES
 // ============================================================================
+
 void AVLTree::incrementFrequency(const std::vector<char32_t> &key) {
   AVLNode *n = find(root, key);
   if (n)
     n->frequency++;
+}
+
+static bool derived_contains(const std::vector<std::vector<char32_t>> &derived,
+                             const std::vector<char32_t> &d) {
+  for (size_t i = 0; i < derived.size(); i++) {
+    if (vector_equals(derived[i], d))
+      return true;
+  }
+  return false;
 }
 
 void AVLTree::addDerived(const std::vector<char32_t> &root_key,
@@ -132,96 +175,116 @@ void AVLTree::addDerived(const std::vector<char32_t> &root_key,
   if (!n)
     return;
 
-  for (const auto &x : n->derived)
-    if (x == d)
-      return;
-
-  n->derived.push_back(d);
+  if (!derived_contains(n->derived, d)) {
+    n->derived.push_back(d);
+  }
 }
 
 // ============================================================================
-// Parcours infixe
+// PARCOURS AVEC std::function
 // ============================================================================
-static void inorder(const AVLNode *n,
-                    const std::function<void(const AVLNode *)> &cb) {
-  if (!n)
+
+void AVLTree::forEachImpl(AVLNode *node,
+                          std::function<void(const AVLNode *)> callback) const {
+  if (!node)
     return;
-  inorder(n->left, cb);
-  cb(n);
-  inorder(n->right, cb);
+
+  forEachImpl(node->left, callback);
+  callback(node);
+  forEachImpl(node->right, callback);
 }
 
 void AVLTree::forEach(std::function<void(const AVLNode *)> callback) const {
-  inorder(root, callback);
+  forEachImpl(root, callback);
 }
 
 std::vector<std::vector<char32_t>> AVLTree::getAllKeys() const {
   std::vector<std::vector<char32_t>> res;
+
   forEach([&](const AVLNode *n) { res.push_back(n->key); });
+
   return res;
 }
 
-void AVLTree::getAllKeys(
-    const std::function<void(const AVLNode *)> &callback) const {
-  forEach(callback);
-}
-
 // ============================================================================
-// Suppression avec rééquilibrage
+// SUPPRESSION
 // ============================================================================
-static AVLNode *minValueNode(AVLNode *node) {
-  while (node && node->left)
-    node = node->left;
-  return node;
-}
 
 AVLNode *AVLTree::remove(AVLNode *node, const std::vector<char32_t> &key,
                          bool &deleted) {
   if (!node)
     return nullptr;
 
-  if (key < node->key) {
+  if (vector_less(key, node->key)) {
     node->left = remove(node->left, key, deleted);
-  } else if (key > node->key) {
+  } else if (vector_less(node->key, key)) {
     node->right = remove(node->right, key, deleted);
   } else {
+    // Nœud trouvé
     deleted = true;
 
+    // Cas 1 ou 2 enfants
     if (!node->left || !node->right) {
       AVLNode *child = node->left ? node->left : node->right;
-      delete node;
-      return child;
+
+      if (!child) {
+        // Pas d'enfant - suppression simple
+        delete node;
+        return nullptr;
+      } else {
+        // Un enfant - remplacer par l'enfant
+        AVLNode *temp = node;
+        // Copier les données de l'enfant vers le node courant
+        node->key = child->key;
+        node->frequency = child->frequency;
+        node->derived = child->derived;
+        node->left = child->left;
+        node->right = child->right;
+        node->height = child->height;
+
+        delete child; // Supprimer l'enfant (pas le node)
+        return node;  // Retourner le node modifié
+      }
     } else {
+      // Cas 2 enfants: trouver successeur (minimum du sous-arbre droit)
       AVLNode *succ = minValueNode(node->right);
+
+      // Copier les données du successeur
       node->key = succ->key;
       node->frequency = succ->frequency;
       node->derived = succ->derived;
+
+      // Supprimer le successeur du sous-arbre droit
       bool dummy = false;
       node->right = remove(node->right, succ->key, dummy);
     }
   }
 
+  // Si l'arbre n'avait qu'un seul nœud
   if (!node)
     return nullptr;
 
-  node->height = 1 + std::max(height(node->left), height(node->right));
+  // 2. Mise à jour hauteur
+  node->height = 1 + max_int(nodeHeight(node->left), nodeHeight(node->right));
+
+  // 3. Rééquilibrage
   int balance = getBalance(node);
 
-  // Left Left
+  // Gauche Gauche
   if (balance > 1 && getBalance(node->left) >= 0)
     return rotateRight(node);
 
-  // Left Right
+  // Gauche Droite
   if (balance > 1 && getBalance(node->left) < 0) {
     node->left = rotateLeft(node->left);
     return rotateRight(node);
   }
 
-  // Right Right
+  // Droite Droite
   if (balance < -1 && getBalance(node->right) <= 0)
     return rotateLeft(node);
 
-  // Right Left
+  // Droite Gauche
   if (balance < -1 && getBalance(node->right) > 0) {
     node->right = rotateRight(node->right);
     return rotateLeft(node);
@@ -230,7 +293,8 @@ AVLNode *AVLTree::remove(AVLNode *node, const std::vector<char32_t> &key,
   return node;
 }
 
-void AVLTree::remove(const std::vector<char32_t> &key) {
-  bool deleted = false;
-  root = remove(root, key, deleted);
-}
+// ============================================================================
+// HAUTEUR PUBLIQUE
+// ============================================================================
+
+int AVLTree::height() const { return nodeHeight(root); }

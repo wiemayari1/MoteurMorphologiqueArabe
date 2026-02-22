@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <iomanip>
+#include <map>
+#include <mutex>
 #include <sstream>
 
 namespace morpho {
@@ -247,6 +249,22 @@ std::vector<std::string> parseJsonArray(const std::string &arr) {
 }
 
 // ============================================================================
+// STOCKAGE DES QUESTIONS DE JEU (pour validation des réponses)
+// ============================================================================
+struct GameQuestionData {
+  int id;
+  std::string type;
+  std::vector<char32_t> correct_answer;
+  std::vector<char32_t> word;
+  std::vector<char32_t> root;
+  std::vector<char32_t> scheme_name;
+};
+
+static std::map<int, GameQuestionData> g_activeQuestions;
+static std::mutex g_gameMutex;
+static int g_nextQuestionId = 1;
+
+// ============================================================================
 // ROUTES
 // ============================================================================
 static int g_nextId = 1;
@@ -371,6 +389,10 @@ void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
         }
 
         std::string value = urlDecode(path.substr(lastSlash + 1));
+
+        // DEBUG - Décommenter pour voir ce qui arrive
+        // std::cerr << "DELETE: raw value = [" << value << "]\n";
+
         auto u32value = normalize_ar(unicode::utf8_to_u32(value));
 
         if (!roots.contains(u32value)) {
@@ -660,6 +682,8 @@ void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
       [&roots, &schemes](const std::string &, const std::string &,
                          const std::string &,
                          const std::map<std::string, std::string> &) {
+        std::lock_guard<std::mutex> lock(g_gameMutex);
+
         std::vector<std::vector<char32_t>> allRoots;
         roots.forEach(
             [&](const AVLNode *node) { allRoots.push_back(node->key); });
@@ -680,11 +704,25 @@ void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
           schemeTemplates.push_back(s.templ);
         }
 
+        // Vider les anciennes questions
+        g_activeQuestions.clear();
+        g_nextQuestionId = 1;
+
         std::vector<std::string> questions;
         for (int i = 0; i < 5; i++) {
           GameQuestion q =
               generate_game_question(allRoots, schemeNames, schemeTemplates);
-          q.id = i + 1;
+          q.id = g_nextQuestionId++;
+
+          // Stocker la question pour validation ultérieure
+          GameQuestionData qdata;
+          qdata.id = q.id;
+          qdata.type = q.type;
+          qdata.correct_answer = q.correct_answer;
+          qdata.word = q.word;
+          qdata.root = q.root;
+          qdata.scheme_name = q.scheme_name;
+          g_activeQuestions[q.id] = qdata;
 
           std::string optionsArray = "[";
           for (size_t j = 0; j < q.options.size(); j++) {
@@ -711,11 +749,13 @@ void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
             std::to_string(allRoots.size() * allSchemes.size()) + "\"}");
       });
 
-  // ----- JEU - ANSWER -----
+  // ----- JEU - ANSWER ----- (CORRIGÉ !)
   server.post("/api/game/answer",
               [](const std::string &, const std::string &,
                  const std::string &body,
                  const std::map<std::string, std::string> &) {
+                std::lock_guard<std::mutex> lock(g_gameMutex);
+
                 SimpleMap data = parseJson(body);
 
                 std::string *qidPtr = data.get("questionId");
@@ -725,11 +765,35 @@ void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
                   return errorResponse("معرف السؤال أو الإجابة مفقود");
                 }
 
-                bool correct = !ansPtr->empty();
+                int qid = 0;
+                try {
+                  qid = std::stoi(*qidPtr);
+                } catch (...) {
+                  return errorResponse("معرف السؤال غير صالح");
+                }
+
+                // Vérifier si la question existe
+                auto it = g_activeQuestions.find(qid);
+                if (it == g_activeQuestions.end()) {
+                  return errorResponse("السؤال غير موجود أو انتهت صلاحيته");
+                }
+
+                const auto &qdata = it->second;
+
+                // Normaliser la réponse de l'utilisateur
+                auto userAnswer = normalize_ar(unicode::utf8_to_u32(*ansPtr));
+                auto correctAnswer = normalize_ar(qdata.correct_answer);
+
+                // Comparer les réponses
+                bool correct = (userAnswer == correctAnswer);
+
+                std::string correctAnswerStr =
+                    unicode::u32_to_utf8(qdata.correct_answer);
 
                 return successResponse(
                     jsonObject({{"correct", correct ? "true" : "false"},
-                                {"correctAnswer", *ansPtr}}));
+                                {"correctAnswer", correctAnswerStr},
+                                {"yourAnswer", *ansPtr}}));
               });
 
   // Route racine

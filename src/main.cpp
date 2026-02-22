@@ -235,8 +235,7 @@ int main(int argc, char **argv) {
 
       // ✅ CORRECTIONS ICI
       vector<vector<char32_t>> roots;
-      tree.getAllKeys([&](const AVLNode *n) { roots.push_back(n->key); });
-
+      roots = tree.getAllKeys();
       vector<vector<char32_t>> scheme_names;
       vector<vector<char32_t>> scheme_templates;
       for (const auto &s : ht.allSchemes()) {

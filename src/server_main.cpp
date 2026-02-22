@@ -11,12 +11,11 @@
 #include <string>
 #include <unistd.h>
 
-
 using namespace morpho;
 
 // Handler pour SIGINT (Ctrl+C)
 static bool g_running = true;
-void signalHandler(int signum) {
+void signalHandler(int /*signum*/) {
   std::cout << "\nArrêt du serveur...\n";
   g_running = false;
 }
@@ -146,8 +145,7 @@ int main(int argc, char **argv) {
 
   // Vérification
   int verifyCount = 0;
-  roots.forEach([&](const AVLNode *n) { verifyCount++; });
-
+  roots.forEach([&](const AVLNode *) { verifyCount++; });
   std::cout << "\nTotal: " << verifyCount << " racines, "
             << schemes.allSchemes().size() << " schèmes\n\n";
 

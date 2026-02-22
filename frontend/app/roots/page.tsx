@@ -1,4 +1,4 @@
-// frontend/app/roots/page.tsx - VERSION CORRIGÉE AVEC ID
+// frontend/app/roots/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { getRoots, addRoot, deleteRoot, isValidRoot, isArabicText } from "@/lib/api";
+import { getRoots, addRoot, deleteRootByValue, isValidRoot, isArabicText } from "@/lib/api";
 import type { Root } from "@/lib/types";
 import { TreePine, Plus, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 
@@ -20,7 +20,7 @@ export default function RootsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [inputError, setInputError] = useState("");
-  const [deletingId, setDeletingId] = useState<number | null>(null); // ← number, pas string
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadRoots();
@@ -73,7 +73,7 @@ export default function RootsPage() {
     setAdding(false);
   };
 
-  // CORRECTION: Utiliser l'ID (number) au lieu de la valeur (string)
+  // CORRECTION: Utiliser deleteRootByValue avec la valeur arabe
   const handleDelete = async (id: number, value: string) => {
     if (!confirm(`هل أنت متأكد من حذف الجذر "${value}"؟`)) {
       return;
@@ -83,7 +83,8 @@ export default function RootsPage() {
     setError("");
     setSuccess("");
 
-    const response = await deleteRoot(id); // ← ID, pas value !
+    // Envoyer la valeur arabe au lieu de l'ID
+    const response = await deleteRootByValue(value);
     if (response.success) {
       setSuccess("تم حذف الجذر بنجاح");
       await loadRoots();
@@ -190,7 +191,7 @@ export default function RootsPage() {
                       variant="ghost"
                       size="icon"
                       className="text-red-400 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => handleDelete(root.id, root.value)} // ← ID + value !
+                      onClick={() => handleDelete(root.id, root.value)}
                       disabled={deletingId === root.id}
                     >
                       {deletingId === root.id ? (
