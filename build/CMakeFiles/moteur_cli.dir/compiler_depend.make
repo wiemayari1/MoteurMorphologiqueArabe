@@ -411,10 +411,21 @@ CMakeFiles/moteur_cli.dir/src/cli_main.cpp.o: ../src/cli_main.cpp \
   /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
   /usr/include/c++/11/bits/fstream.tcc \
-  /usr/include/c++/11/iostream \
-  /usr/include/c++/11/limits \
+  /usr/include/c++/11/iomanip \
+  /usr/include/c++/11/locale \
+  /usr/include/c++/11/bits/locale_facets_nonio.h \
+  /usr/include/c++/11/ctime \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
+  /usr/include/libintl.h \
+  /usr/include/c++/11/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/11/bits/locale_conv.h \
+  /usr/include/c++/11/bits/unique_ptr.h \
+  /usr/include/c++/11/bits/quoted_string.h \
   /usr/include/c++/11/sstream \
-  /usr/include/c++/11/bits/sstream.tcc
+  /usr/include/c++/11/bits/sstream.tcc \
+  /usr/include/c++/11/iostream \
+  /usr/include/c++/11/limits
 
 CMakeFiles/moteur_cli.dir/src/hash_table.cpp.o: ../src/hash_table.cpp \
   /usr/include/stdc-predef.h \
@@ -809,9 +820,19 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
   /usr/include/c++/11/limits
 
 
+/usr/include/c++/11/limits:
+
 /usr/include/c++/11/sstream:
 
-/usr/include/c++/11/limits:
+/usr/include/c++/11/bits/quoted_string.h:
+
+/usr/include/c++/11/bits/locale_conv.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h:
+
+/usr/include/c++/11/bits/locale_facets_nonio.h:
 
 /usr/include/c++/11/bits/fstream.tcc:
 
@@ -820,6 +841,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h:
 
 /usr/include/c++/11/bits/istream.tcc:
+
+/usr/include/c++/11/bits/unique_ptr.h:
 
 /usr/include/c++/11/ostream:
 
@@ -888,6 +911,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 /usr/include/c++/11/string_view:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h:
+
+/usr/include/c++/11/locale:
 
 /usr/include/linux/errno.h:
 
@@ -1065,6 +1090,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/bits/stl_function.h:
 
+/usr/include/c++/11/bits/locale_facets_nonio.tcc:
+
 /usr/include/x86_64-linux-gnu/bits/time.h:
 
 /usr/include/c++/11/ext/atomicity.h:
@@ -1175,6 +1202,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/bits/stl_vector.h:
 
+/usr/include/libintl.h:
+
 /usr/include/x86_64-linux-gnu/bits/endianness.h:
 
 /usr/include/c++/11/bits/stl_iterator_base_types.h:
@@ -1238,6 +1267,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 /usr/include/x86_64-linux-gnu/sys/select.h:
 
 /usr/include/x86_64-linux-gnu/bits/select2.h:
+
+/usr/include/c++/11/iomanip:
 
 /usr/include/c++/11/ext/new_allocator.h:
 
