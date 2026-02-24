@@ -1,24 +1,43 @@
-# Node
+# --- Moteur Morphologique Arabe ---
+
+# Node/Next.js (Frontend)
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/node_modules/
+frontend/.env*.local
+frontend/npm-debug.log*
+
+# C++ / CMake (Backend)
+# Note: Currently build/ is tracked locally and on remote as requested.
+# To ignore FUTURE artifacts but keep existing, we leave it as is or use specific rules.
+build/CMakeFiles/
+build/CMakeCache.txt
+build/Makefile
+build/cmake_install.cmake
+build/moteur_tests
+build/moteur_cli
+build/moteur_tui
+build/morpho_api_server
+# (We add the binaries above just in case they were not already tracked, 
+# but usually, standard practice is to ignore the whole build folder)
+# build/
+
+# Root Level Dependencies
 node_modules/
-api/node_modules/
+package-lock.json (Optional: usually tracked)
+!.gitignore
 
-# Angular
-moteur-morpho-ui/node_modules/
-moteur-morpho-ui/dist/
+# IDE / OS Specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.sublime-project
+*.sublime-workspace
 
-# Build C++
-build/
-
-# Node modules
-node_modules/
-
-# Next.js build
-.next/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment files
-.env
+# Logs & Temporary Files
+*.log
+tmp/
+temp/

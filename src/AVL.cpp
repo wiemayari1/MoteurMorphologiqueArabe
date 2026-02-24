@@ -207,6 +207,17 @@ std::vector<std::vector<char32_t>> AVLTree::getAllKeys() const {
 }
 
 // ============================================================================
+// TROUVER LE MINIMUM (successeur pour la suppression)
+// ============================================================================
+static AVLNode *minValueNode(AVLNode *node) {
+  AVLNode *current = node;
+  while (current && current->left != nullptr) {
+    current = current->left;
+  }
+  return current;
+}
+
+// ============================================================================
 // SUPPRESSION
 // ============================================================================
 
@@ -233,7 +244,6 @@ AVLNode *AVLTree::remove(AVLNode *node, const std::vector<char32_t> &key,
         return nullptr;
       } else {
         // Un enfant - remplacer par l'enfant
-        AVLNode *temp = node;
         // Copier les données de l'enfant vers le node courant
         node->key = child->key;
         node->frequency = child->frequency;
@@ -291,6 +301,15 @@ AVLNode *AVLTree::remove(AVLNode *node, const std::vector<char32_t> &key,
   }
 
   return node;
+}
+
+// ============================================================================
+// SUPPRESSION PUBLIQUE (wrapper)
+// ============================================================================
+
+void AVLTree::remove(const std::vector<char32_t> &key) {
+  bool dummy = false;
+  root = remove(root, key, dummy);
 }
 
 // ============================================================================
