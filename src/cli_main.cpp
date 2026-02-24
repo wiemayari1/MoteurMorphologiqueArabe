@@ -1,7 +1,11 @@
 #include "AVL.h"
+#include "arabic_display.h"
 #include "hash_table.h"
 #include "morpho.h"
 #include "unicode_utils.h"
+#include <algorithm>
+#include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -35,8 +39,8 @@ void clear_screen() { cout << "\033[2J\033[H"; }
 void print_header(const string &title) {
   cout << CYAN << "============================================================"
        << RESET << "\n";
-  cout << CYAN << "  " << RESET << BOLD << setw(54) << left << title << RESET
-       << CYAN << "  " << RESET << "\n";
+  cout << CYAN << "  " << RESET << BOLD << title << RESET << CYAN << "  "
+       << RESET << "\n";
   cout << CYAN << "============================================================"
        << RESET << "\n";
 }
@@ -125,7 +129,6 @@ bool load_schemes(const string &file, HashTable &ht) {
     string name = line.substr(0, sep);
     string templ = line.substr(sep + 1);
 
-    // Supprimer les espaces blancs
     name.erase(0, name.find_first_not_of(" \t\r\n"));
     name.erase(name.find_last_not_of(" \t\r\n") + 1);
     templ.erase(0, templ.find_first_not_of(" \t\r\n"));
@@ -159,16 +162,16 @@ void show_menu() {
        << " Lister toutes les racines et derives\n";
   cout << "  " << CYAN << "6)" << RESET
        << " Voir les derives d'une racine specifique\n";
+  cout << "  " << CYAN << "7)" << RESET
+       << " Generer famille morphologique complete\n";
 
   cout << "\n" << BOLD << "Gestion des Schemes :" << RESET << "\n";
-  cout << "  " << CYAN << "7)" << RESET << " Lister les schemes\n";
-  cout << "  " << CYAN << "8)" << RESET << " Ajouter un scheme\n";
-  cout << "  " << CYAN << "9)" << RESET << " Modifier un scheme\n";
-  cout << "  " << CYAN << "10)" << RESET << " Supprimer un scheme\n";
+  cout << "  " << CYAN << "8)" << RESET << " Lister les schemes\n";
+  cout << "  " << CYAN << "9)" << RESET << " Ajouter un scheme\n";
+  cout << "  " << CYAN << "10)" << RESET << " Modifier un scheme\n";
+  cout << "  " << CYAN << "11)" << RESET << " Supprimer un scheme\n";
 
-  cout << "\n" << BOLD << "Generation et Analyse :" << RESET << "\n";
-  cout << "  " << CYAN << "11)" << RESET
-       << " Generer famille morphologique complete\n";
+  cout << "\n" << BOLD << "Jeu :" << RESET << "\n";
   cout << "  " << CYAN << "12)" << RESET << " Mini-jeu morphologique\n";
 
   cout << "\n" << CYAN << "  0) Quitter" << RESET << "\n";
@@ -177,6 +180,9 @@ void show_menu() {
 
 // ============================================================================
 // 1. GENERATION DE MOT (RACINE + SCHEME)
+// ============================================================================
+// ============================================================================
+// 1. GENERATION DE MOT (RACINE + SCHEME) - CORRIGÉ
 // ============================================================================
 void generate_word(AVLTree &avl, HashTable &ht) {
   clear_screen();
@@ -202,9 +208,14 @@ void generate_word(AVLTree &avl, HashTable &ht) {
 
   cout << "\nSchemes disponibles (" << all_schemes.size() << "):\n";
   for (size_t i = 0; i < all_schemes.size() && i < 10; i++) {
-    cout << "  " << (i + 1) << ". " << CYAN
-         << unicode::u32_to_utf8(all_schemes[i].name) << RESET << " ("
-         << unicode::u32_to_utf8(all_schemes[i].templ) << ")\n";
+    string name = unicode::u32_to_utf8(all_schemes[i].name);
+    string templ = unicode::u32_to_utf8(all_schemes[i].templ);
+
+    cout << "  " << CYAN << (i + 1) << "." << RESET << " ";
+    print_ar(name); // Affichage inversé (correct)
+    cout << "  →  ";
+    print_ar(templ); // Affichage inversé (correct)
+    cout << "\n";
   }
   if (all_schemes.size() > 10) {
     cout << "  ... et " << (all_schemes.size() - 10) << " autres\n";
@@ -214,13 +225,29 @@ void generate_word(AVLTree &avl, HashTable &ht) {
   string scheme_utf8;
   getline(cin, scheme_utf8);
 
-  auto sname = normalize_ar(unicode::utf8_to_u32(scheme_utf8));
+  // CORRECTION : Ne pas normaliser l'entrée, l'utilisateur tape déjà
+  // correctement On convertit juste en UTF-32 sans inversion
+  auto sname = unicode::utf8_to_u32(scheme_utf8);
+
+  // Optionnel : normaliser pour enlever les diacritiques si nécessaire
+  sname = normalize_ar(sname);
 
   auto *entry = ht.get(sname);
   if (!entry) {
-    print_error("Scheme '" + scheme_utf8 + "' introuvable.");
-    wait_enter();
-    return;
+    // Essayer avec l'inverse au cas où le terminal a inversé la saisie
+    auto sname_reversed = sname;
+    reverse(sname_reversed.begin(), sname_reversed.end());
+    entry = ht.get(sname_reversed);
+
+    if (!entry) {
+      cout << RED << "✗ Scheme '";
+      print_ar(scheme_utf8); // Afficher ce que l'utilisateur a tapé
+      cout << "' introuvable." << RESET << "\n";
+      wait_enter();
+      return;
+    }
+    // Si trouvé avec l'inverse, utiliser l'inverse pour la génération
+    sname = sname_reversed;
   }
 
   auto result = entry->rule.apply(root);
@@ -230,13 +257,23 @@ void generate_word(AVLTree &avl, HashTable &ht) {
   } else {
     print_separator();
     cout << BOLD << "RESULTAT :" << RESET << "\n";
-    cout << "  Racine  : " << CYAN << unicode::u32_to_utf8(root) << RESET
-         << "\n";
-    cout << "  Scheme  : " << YELLOW << scheme_utf8 << RESET << "\n";
-    cout << "  Pattern : " << MAGENTA << unicode::u32_to_utf8(entry->templ)
-         << RESET << "\n";
-    cout << "  Mot     : " << GREEN << BOLD << unicode::u32_to_utf8(result)
-         << RESET << "\n";
+
+    cout << "  Racine  : ";
+    print_ar_u32(root, CYAN);
+    cout << "\n";
+
+    cout << "  Scheme  : ";
+    print_ar(scheme_utf8, YELLOW); // Afficher l'entrée utilisateur
+    cout << "\n";
+
+    cout << "  Pattern : ";
+    print_ar_u32(entry->templ, MAGENTA);
+    cout << "\n";
+
+    cout << "  Mot     : ";
+    print_ar_u32(result, GREEN + BOLD);
+    cout << "\n";
+
     print_separator();
 
     if (avl.contains(root)) {
@@ -290,14 +327,21 @@ void validate_word_cli(AVLTree &avl, HashTable &ht) {
 
   print_separator();
   cout << BOLD << "RESULTAT :" << RESET << "\n";
-  cout << "  Mot    : " << word_utf8 << "\n";
-  cout << "  Racine : " << unicode::u32_to_utf8(root) << "\n";
-  cout << "  ";
+
+  cout << "  Mot    : ";
+  print_ar(word_utf8);
+  cout << "\n";
+
+  cout << "  Racine : ";
+  print_ar_u32(root);
+  cout << "\n  ";
 
   if (found) {
     cout << BG_GREEN << WHITE << BOLD << " OUI " << RESET;
     cout << GREEN << " Le mot appartient a la racine." << RESET << "\n";
-    cout << "  Scheme reconnu : " << CYAN << matched_scheme << RESET << "\n";
+    cout << "  Scheme reconnu : ";
+    print_ar(matched_scheme, CYAN);
+    cout << "\n";
 
     if (avl.contains(root)) {
       avl.addDerived(root, word);
@@ -338,8 +382,9 @@ void add_root_cli(AVLTree &avl) {
   }
 
   avl.insert(root);
-  print_success("Racine '" + unicode::u32_to_utf8(root) +
-                "' ajoutee avec succes.");
+  cout << GREEN << "✓ Racine '";
+  print_ar_u32(root);
+  cout << "' ajoutee avec succes." << RESET << "\n";
   wait_enter();
 }
 
@@ -362,8 +407,10 @@ void remove_root_cli(AVLTree &avl) {
     return;
   }
 
-  cout << YELLOW << "Confirmer la suppression de '"
-       << unicode::u32_to_utf8(root) << "' ? (o/n) : " << RESET;
+  cout << YELLOW << "Confirmer la suppression de '";
+  print_ar_u32(root);
+  cout << "' ? (o/n) : " << RESET;
+
   string confirm;
   getline(cin, confirm);
 
@@ -389,17 +436,18 @@ void list_roots_cli(AVLTree &avl) {
   avl.forEach([&](const AVLNode *n) {
     found = true;
     count++;
+
     cout << CYAN << count << "." << RESET << " ";
-    cout << BOLD << unicode::u32_to_utf8(n->key) << RESET;
-    cout << " (frequence: " << n->frequency
-         << ", derives: " << n->derived.size() << ")\n";
+    print_ar_u32(n->key, BOLD);
+    cout << " (freq: " << n->frequency << ", derives: " << n->derived.size()
+         << ")\n";
 
     if (!n->derived.empty()) {
       cout << "   Derives : ";
       for (size_t i = 0; i < n->derived.size(); i++) {
         if (i > 0)
           cout << ", ";
-        cout << GREEN << unicode::u32_to_utf8(n->derived[i]) << RESET;
+        print_ar_u32(n->derived[i], GREEN);
       }
       cout << "\n";
     }
@@ -441,17 +489,19 @@ void view_root_derivatives(AVLTree &avl) {
   });
 
   if (target_node) {
-    cout << "\n"
-         << BOLD << "Racine : " << unicode::u32_to_utf8(target_node->key)
-         << RESET << "\n";
+    cout << "\n" << BOLD << "Racine : ";
+    print_ar_u32(target_node->key);
+    cout << RESET << "\n";
+
     cout << "Frequence d'utilisation : " << target_node->frequency << "\n";
     cout << "Nombre de derives : " << target_node->derived.size() << "\n\n";
 
     if (!target_node->derived.empty()) {
       cout << BOLD << "Liste des derives :" << RESET << "\n";
       for (size_t i = 0; i < target_node->derived.size(); i++) {
-        cout << "  " << (i + 1) << ". " << CYAN
-             << unicode::u32_to_utf8(target_node->derived[i]) << RESET << "\n";
+        cout << "  " << (i + 1) << ". ";
+        print_ar_u32(target_node->derived[i], CYAN);
+        cout << "\n";
       }
     } else {
       print_info("Aucun derive enregistre pour cette racine.");
@@ -475,38 +525,20 @@ void list_schemes_cli(HashTable &ht) {
     return;
   }
 
-  cout << CYAN
-       << "+-----+-------------+-----------------+------------------------+"
-       << RESET << "\n";
-  cout << CYAN << "|" << RESET << " N   " << CYAN << "|" << RESET
-       << " Nom         " << CYAN << "|" << RESET << " Pattern         " << CYAN
-       << "|" << RESET << " Description            " << CYAN << "|" << RESET
-       << "\n";
-  cout << CYAN
-       << "+-----+-------------+-----------------+------------------------+"
-       << RESET << "\n";
+  print_separator();
 
   for (size_t i = 0; i < all.size(); i++) {
     string name = unicode::u32_to_utf8(all[i].name);
     string templ = unicode::u32_to_utf8(all[i].templ);
-    string desc = unicode::u32_to_utf8(all[i].rule.description);
 
-    if (name.length() > 11)
-      name = name.substr(0, 8) + "...";
-    if (templ.length() > 15)
-      templ = templ.substr(0, 12) + "...";
-    if (desc.length() > 22)
-      desc = desc.substr(0, 19) + "...";
-
-    cout << CYAN << "|" << RESET << " " << setw(3) << left << (i + 1) << " "
-         << CYAN << "|" << RESET;
-    cout << " " << setw(11) << name << " " << CYAN << "|" << RESET;
-    cout << " " << setw(15) << templ << " " << CYAN << "|" << RESET;
-    cout << " " << setw(22) << desc << " " << CYAN << "|" << RESET << "\n";
+    cout << CYAN << setw(2) << (i + 1) << "." << RESET << " ";
+    print_ar(name);
+    cout << " " << YELLOW << "|" << RESET << " ";
+    print_ar(templ);
+    cout << "\n";
   }
-  cout << CYAN
-       << "+-----+-------------+-----------------+------------------------+"
-       << RESET << "\n";
+
+  print_separator();
   cout << "\nTotal : " << all.size() << " scheme(s)\n";
 
   wait_enter();
@@ -555,7 +587,9 @@ void add_scheme_cli(HashTable &ht) {
   }
 
   ht.put(unicode::utf8_to_u32(name_utf8), templ_u32, desc);
-  print_success("Scheme '" + name_utf8 + "' ajoute avec succes.");
+  cout << GREEN << "✓ Scheme '";
+  print_ar(name_utf8);
+  cout << "' ajoute avec succes." << RESET << "\n";
   wait_enter();
 }
 
@@ -579,8 +613,10 @@ void update_scheme_cli(HashTable &ht) {
     return;
   }
 
-  cout << "Pattern actuel : " << CYAN << unicode::u32_to_utf8(entry->templ)
-       << RESET << "\n";
+  cout << "Pattern actuel : ";
+  print_ar_u32(entry->templ, CYAN);
+  cout << "\n";
+
   cout << "Nouveau pattern (laisser vide pour garder l'actuel) : ";
   string new_templ;
   getline(cin, new_templ);
@@ -615,7 +651,10 @@ void delete_scheme_cli(HashTable &ht) {
     return;
   }
 
-  cout << YELLOW << "Confirmer la suppression ? (o/n) : " << RESET;
+  cout << YELLOW << "Confirmer la suppression de '";
+  print_ar(name_utf8);
+  cout << "' ? (o/n) : " << RESET;
+
   string confirm;
   getline(cin, confirm);
 
@@ -647,9 +686,9 @@ void generate_family(AVLTree &avl, HashTable &ht) {
     return;
   }
 
-  cout << "\n"
-       << BOLD << "Famille morphologique de : " << CYAN
-       << unicode::u32_to_utf8(root) << RESET << "\n\n";
+  cout << "\n" << BOLD << "Famille morphologique de : ";
+  print_ar_u32(root, CYAN);
+  cout << RESET << "\n\n";
 
   auto derivatives = ht.generateAllDerivatives(root);
 
@@ -659,13 +698,7 @@ void generate_family(AVLTree &avl, HashTable &ht) {
     return;
   }
 
-  cout << CYAN << "+-------------+-----------------+-----------------+" << RESET
-       << "\n";
-  cout << CYAN << "|" << RESET << " Scheme      " << CYAN << "|" << RESET
-       << " Pattern         " << CYAN << "|" << RESET << " Mot genere      "
-       << CYAN << "|" << RESET << "\n";
-  cout << CYAN << "+-------------+-----------------+-----------------+" << RESET
-       << "\n";
+  print_separator();
 
   for (const auto &[scheme_name, word] : derivatives) {
     string sname = unicode::u32_to_utf8(scheme_name);
@@ -676,25 +709,19 @@ void generate_family(AVLTree &avl, HashTable &ht) {
     if (entry)
       pattern = unicode::u32_to_utf8(entry->templ);
 
-    if (sname.length() > 11)
-      sname = sname.substr(0, 8) + "...";
-    if (pattern.length() > 15)
-      pattern = pattern.substr(0, 12) + "...";
-    if (sword.length() > 15)
-      sword = sword.substr(0, 12) + "...";
-
-    cout << CYAN << "|" << RESET << " " << setw(11) << sname << " " << CYAN
-         << "|" << RESET;
-    cout << " " << setw(15) << pattern << " " << CYAN << "|" << RESET;
-    cout << " " << GREEN << setw(15) << sword << RESET << CYAN << "|" << RESET
-         << "\n";
+    print_ar(sname, CYAN);
+    cout << " " << YELLOW << "|" << RESET << " ";
+    print_ar(pattern);
+    cout << " " << YELLOW << "→" << RESET << " ";
+    print_ar(sword, GREEN);
+    cout << "\n";
 
     if (avl.contains(root)) {
       avl.addDerived(root, word);
     }
   }
-  cout << CYAN << "+-------------+-----------------+-----------------+" << RESET
-       << "\n";
+
+  print_separator();
 
   cout << "\n" << derivatives.size() << " mot(s) genere(s).\n";
 
@@ -707,12 +734,118 @@ void generate_family(AVLTree &avl, HashTable &ht) {
 }
 
 // ============================================================================
+// MINI-JEU MORPHOLOGIQUE - VERSION CORRIGÉE
+// ============================================================================
+void play_minigame(const vector<vector<char32_t>> &roots,
+                   const vector<vector<char32_t>> &scheme_names,
+                   const vector<vector<char32_t>> &scheme_templates,
+                   HashTable &ht) {
+
+  int score = 0;
+  int total = 5;
+
+  for (int q = 0; q < total; q++) {
+    clear_screen();
+    print_header("MINI-JEU MORPHOLOGIQUE");
+    cout << CYAN << "Question " << (q + 1) << "/" << total << RESET << "\n\n";
+
+    int root_idx = rand() % roots.size();
+    int scheme_idx = rand() % scheme_templates.size();
+
+    auto root = roots[root_idx];
+    auto scheme = scheme_templates[scheme_idx];
+    auto scheme_name = scheme_names[scheme_idx];
+
+    auto derivatives = ht.generateAllDerivatives(root);
+
+    vector<char32_t> word;
+    for (const auto &[sname, w] : derivatives) {
+      if (sname == scheme_name) {
+        word = w;
+        break;
+      }
+    }
+
+    if (word.empty()) {
+      q--;
+      continue;
+    }
+
+    int question_type = rand() % 2;
+
+    if (question_type == 0) {
+      cout << "Mot: ";
+      print_ar_u32(word);
+      cout << "\n";
+      cout << "Scheme: ";
+      print_ar_u32(scheme_name);
+      cout << "\n";
+      cout << "Quelle est la racine? ";
+
+      string answer;
+      getline(cin, answer);
+
+      auto answer_u32 = normalize_ar(unicode::utf8_to_u32(answer));
+
+      if (answer_u32 == root) {
+        cout << GREEN << "\n✓ Correct!" << RESET << "\n";
+        score++;
+      } else {
+        cout << RED << "\n✗ Incorrect. Reponse: ";
+        print_ar_u32(root);
+        cout << RESET << "\n";
+      }
+    } else {
+      cout << "Mot: ";
+      print_ar_u32(word);
+      cout << "\n";
+      cout << "Racine: ";
+      print_ar_u32(root);
+      cout << "\n";
+      cout << "Quel est le scheme? ";
+
+      string answer;
+      getline(cin, answer);
+
+      auto answer_u32 = normalize_ar(unicode::utf8_to_u32(answer));
+
+      if (answer_u32 == scheme_name) {
+        cout << GREEN << "\n✓ Correct!" << RESET << "\n";
+        score++;
+      } else {
+        cout << RED << "\n✗ Incorrect. Reponse: ";
+        print_ar_u32(scheme_name);
+        cout << RESET << "\n";
+      }
+    }
+
+    if (q < total - 1) {
+      cout << "\n"
+           << YELLOW << "(Appuyez sur Entrée pour continuer...)" << RESET;
+      cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+  }
+
+  clear_screen();
+  print_header("RESULTAT DU JEU");
+  cout << "\n" << BOLD << "Score: " << score << "/" << total << RESET << "\n\n";
+
+  if (score == total) {
+    cout << GREEN
+         << "🎉 Parfait! Excellente connaissance de la morphologie arabe!"
+         << RESET << "\n";
+  } else if (score >= total * 0.6) {
+    cout << YELLOW << "👍 Bien joue! Continuez a pratiquer." << RESET << "\n";
+  } else {
+    cout << RED << "📚 Continuez a pratiquer pour ameliorer vos connaissances."
+         << RESET << "\n";
+  }
+}
+
+// ============================================================================
 // 12. MINI-JEU MORPHOLOGIQUE
 // ============================================================================
 void mini_game(AVLTree &avl, HashTable &ht) {
-  clear_screen();
-  print_header("MINI-JEU MORPHOLOGIQUE");
-
   auto roots = avl.getAllKeys();
   vector<vector<char32_t>> scheme_names;
   vector<vector<char32_t>> scheme_templates;
@@ -723,24 +856,66 @@ void mini_game(AVLTree &avl, HashTable &ht) {
   }
 
   if (roots.size() < 2 || scheme_templates.empty()) {
+    clear_screen();
+    print_header("MINI-JEU MORPHOLOGIQUE");
     print_error(
         "Donnees insuffisantes pour le jeu (minimum 2 racines et 1 scheme).");
     wait_enter();
     return;
   }
 
-  play_minigame(roots, scheme_names, scheme_templates);
+  srand(time(nullptr));
+
+  play_minigame(roots, scheme_names, scheme_templates, ht);
   wait_enter();
 }
 
 // ============================================================================
-// PROGRAMME PRINCIPAL - CORRIGÉ POUR ACCEPTER LES ARGUMENTS
+// SAUVEGARDE DES DONNÉES
+// ============================================================================
+void save_roots_to_file(AVLTree &avl, const string &filename) {
+  ofstream file(filename);
+  if (!file.is_open()) {
+    print_error("Impossible d'ouvrir " + filename + " pour ecriture");
+    return;
+  }
+
+  avl.forEach([&](const AVLNode *n) {
+    file << unicode::u32_to_utf8(n->key);
+    for (size_t i = 0; i < n->derived.size(); ++i) {
+      file << "|" << unicode::u32_to_utf8(n->derived[i]);
+    }
+    file << "\n";
+  });
+
+  file.close();
+  print_success("Racines sauvegardees dans " + filename);
+}
+
+void save_schemes_to_file(HashTable &ht, const string &filename) {
+  ofstream file(filename);
+  if (!file.is_open()) {
+    print_error("Impossible d'ouvrir " + filename + " pour ecriture");
+    return;
+  }
+
+  auto all = ht.allSchemes();
+  for (const auto &s : all) {
+    file << unicode::u32_to_utf8(s.name) << "|" << unicode::u32_to_utf8(s.templ)
+         << "\n";
+  }
+
+  file.close();
+  print_success("Schemes sauvegardes dans " + filename);
+}
+
+// ============================================================================
+// PROGRAMME PRINCIPAL
 // ============================================================================
 int main(int argc, char *argv[]) {
   AVLTree avl;
   HashTable ht(256);
 
-  // CORRECTION: Accepter les arguments en ligne de commande
   string roots_file = "data/roots.txt";
   string schemes_file = "data/schemes.txt";
 
@@ -787,9 +962,11 @@ int main(int argc, char *argv[]) {
       break;
     case 3:
       add_root_cli(avl);
+      save_roots_to_file(avl, roots_file);
       break;
     case 4:
       remove_root_cli(avl);
+      save_roots_to_file(avl, roots_file);
       break;
     case 5:
       list_roots_cli(avl);
@@ -798,24 +975,29 @@ int main(int argc, char *argv[]) {
       view_root_derivatives(avl);
       break;
     case 7:
-      list_schemes_cli(ht);
+      generate_family(avl, ht);
       break;
     case 8:
-      add_scheme_cli(ht);
+      list_schemes_cli(ht);
       break;
     case 9:
-      update_scheme_cli(ht);
+      add_scheme_cli(ht);
+      save_schemes_to_file(ht, schemes_file);
       break;
     case 10:
-      delete_scheme_cli(ht);
+      update_scheme_cli(ht);
+      save_schemes_to_file(ht, schemes_file);
       break;
     case 11:
-      generate_family(avl, ht);
+      delete_scheme_cli(ht);
+      save_schemes_to_file(ht, schemes_file);
       break;
     case 12:
       mini_game(avl, ht);
       break;
     case 0:
+      save_roots_to_file(avl, roots_file);
+      save_schemes_to_file(ht, schemes_file);
       cout << "\n" << GREEN << "Au revoir !" << RESET << "\n";
       return 0;
     default:

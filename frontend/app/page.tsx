@@ -22,7 +22,6 @@ const features = [
     description: "اختبر معرفتك الصرفية ",
     color: "bg-rose-100 text-rose-600",
     hoverColor: "group-hover:bg-rose-200",
-    badge: "جديد",
   },
   {
     href: "/validate",
@@ -52,7 +51,7 @@ const features = [
     href: "/roots",
     icon: TreePine,
     label: "إدارة الجذور",
-    description: "أضف وحذف الجذور العربية (شجرة AVL)",
+    description: "إضافة وحذف الجذور العربية",
     color: "bg-emerald-100 text-emerald-600",
     hoverColor: "group-hover:bg-emerald-200",
   },

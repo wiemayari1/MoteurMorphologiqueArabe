@@ -1,69 +1,68 @@
-# Rapport Technique - Moteur Morphologique Arabe
+Rapport technique                                             
+Moteur de recherche morphologique et générateur de dérivation arabe
+1. Présentation des structures de données utilisées
+1.1 Arbre AVL pour les racines
+Définition et structure dans le Code
+L'arbre AVL est un arbre binaire de recherche auto-équilibré où la différence de hauteur entre les sous-arbres gauche et droit de chaque nœud est au plus 1.
+Structure du nœud dans le projet :
+Clé : vecteur représentant la racine en UTF-32
+Hauteur : entier représentant la hauteur du nœud, utilisé pour détecter les déséquilibres 
+Fréquence : compteur d'utilisation d’une  racine pour la dérivation
+Liste des dérivés : vecteur dynamique des mots dérivés valides d’une racine qui sont accumulées au fur et à mesure de la génération en évitant les doublons 
+Pour l’arbre, le type de parcours est un parcours infixe : sous-arbre gauche →  racine → sous-arbre droit. Cela produit un affichage trié par ordre lexicographique (tri correct des caractères arabes) des racines.
 
-## 1. Introduction
-Ce projet a pour objectif de développer un moteur morphologique pour la langue arabe, capable d'analyser et de générer des mots à partir de racines trilitères et de schèmes. Il repose sur des structures de données avancées pour garantir performance et robustesse.
+1.2 Table de Hachage pour les Schèmes Morphologiques
+Définition et structure dans le Code
+La table de hachage stocke les schèmes morphologiques. Sa structure dans le projet contient  :
+Règle de transformation : encapsule la logique morphologique (avec les placeholders (ف, ع, ل)) et les méthodes pour appliquer cette règle 
+Entrée de schème : contient le nom du schème, le template (la forme abstraite) et la règle de transformation associée
+Bucket : conteneur avec indicateurs d'utilisation et de suppression, permettant de gérer l'état de chaque emplacement dans la table
+ Elle utilise l'adressage ouvert avec sondage linéaire et une technique de suppression spécifique : 
+L’adressage ouvert : les collisions sont résolues en cherchant un autre emplacement dans la table même 
+Le sondage linéaire : en cas de collision, on cherche l'emplacement libre suivant 
+Lazy deletion : les entrées supprimées sont marquées mais conservées pour ne pas casser la chaîne de sondage 
+1.3 Liste des schèmes 
+La liste des schèmes est le cœur du système de dérivation. Elle permet de parcourir tous les schèmes disponibles et représente les règles grammaticales que le moteur applique mécaniquement aux racines pour la dérivation et la validation. 
+2. Description des algorithmes de génération et validation
+2.1 Algorithme de génération morphologique
+Principe fonctionnel
+La génération des dérivées d'une racine parcourt l'ensemble des schèmes de la table de hachage et applique le gabarit (template) pour chaque entrée valide.
+L'algorithme substitue les placeholders ف (position 1), ع (position 2), ل (position 3) par les lettres correspondantes de la racine trilitère, les autres caractères du template sont conservés tels qu’ils sont. 
+2.2 Algorithme de validation morphologique
+Principe fonctionnel
+L'algorithme de validation vérifie si un mot donné peut être dérivé d'une racine spécifique selon un template donné en utilisant la table de hachage. Il extrait la racine implicite du mot en analysant les positions des placeholders, puis il normalise la racine extraite, la compare à la racine attendue et retourne soit succès soit échec. 
+3. Choix et justification des algorithmes employés
+Pourquoi AVL et pas un ABR simple ?
+L'AVL garantit une complexité logarithmique pour toutes les opérations, contrairement à l'ABR qui peut dégénérer en liste chaînée avec une complexité linéaire en cas d'insertions ordonnées. 
+Pourquoi table de hachage 
+La table de hachage offre un accès direct en temps constant, idéal pour les consultations fréquentes des schèmes lors de la génération et de la validation.
+Pourquoi un adressage ouvert ?
+L'adressage ouvert avec sondage linéaire a été préféré aux listes chaînées pour sa meilleure localité de cache et l'absence d'allocation dynamique. Il est adapté aux petits ensembles de schèmes.
+Pourquoi UTF-32 ?
 
-## 2. Structures de Données Utilisées
+L'UTF-32 permet un accès direct aux caractères en temps constant grâce à sa taille fixe de quatre octets (puisque Chaque point de code arabe est stocké sur exactement 32 bits), alors que l'UTF-8 nécessite un décodage séquentiel.
 
-### 2.1 Arbre AVL pour les Racines
-Nous avons choisi un **Arbre AVL** (Arbre Binaire de Recherche Équilibré) pour stocker les racines trilitères.
-*   **Pourquoi ?** L'AVL garantit une hauteur logarithmique ($O(\log n)$), ce qui assure une recherche, une insertion et une suppression très rapides, même avec un grand nombre de racines.
-*   **Structure du Nœud (`include/AVL.h`)** :
-    *   `key` (`std::u32string`) : La racine (ex: "كتب").
-    *   `derived` (`std::vector`) : Liste des dérivés validés associés.
-    *   `frequency` (`int`) : Compteur d'utilisation de la racine.
-    *   `height` (`int`) : Pour le maintien de l'équilibre.
-*   **Opérations** : Insertion avec rotations (gauche/droite) pour maintenir l'équilibre. Suppression implémentée avec rééquilibrage.
+4. Analyse de complexité algorithmique
+4.1 Arbre AVL
+Insertion, suppression et recherche → O(log n)
+Parcours infixe complet / énumération des clés → O(n)
 
-### 2.2 Table de Hachage pour les Schèmes
-Les schèmes sont gérés via une **Table de Hachage** implémentée manuellement.
-*   **Pourquoi ?** L'accès à un schème par son nom doit être instantané ($O(1)$ en moyenne).
-*   **Gestion des Collisions** : Nous avons opté pour l'**Adressage Ouvert avec Sondage Linéaire** (Linear Probing), efficace pour cette taille de données et évitant l'allocation dynamique de listes chaînées.
-*   **Redimensionnement** : La table double de taille automatiquement lorsque le facteur de charge dépasse 0.7, garantissant des performances constantes.
+4.2 Table de hachage
+Insertion,recherche et suppression  → O(n) au pire des cas et O(1) en moyenne 
 
-## 3. Algorithmes Principaux
-
-### 3.1 Génération Morphologique
-L'algorithme de génération (`apply_template` dans `src/morpho.cpp`) prend une racine (ex: "كتب") et un template (ex: "مَ1ْ2ُو3").
-1.  Il parcourt le template caractère par caractère.
-2.  Si le caractère est un chiffre ('1', '2', '3'), il est remplacé par la lettre correspondante de la racine.
-3.  Sinon, le caractère du template est conservé (lettres augmentées).
-
-### 3.2 Validation Morphologique
-L'algorithme inverse (`extract_root_from_word`) tente de déduire la racine à partir d'un mot et d'un schème candidat.
-1.  Il superpose le mot et le template.
-2.  Si les caractères fixes du template correspondent au mot, il extrait les lettres aux positions '1', '2', '3'.
-3.  Si les lettres extraites forment une racine valide (présente dans l'AVL), le mot est validé.
-
-## 4. Analyse de la Complexité
-
-*   **Recherche de racine** : $O(\log N)$ où $N$ est le nombre de racines (grâce à l'AVL).
-*   **Accès à un schème** : $O(1)$ en moyenne (Table de Hachage).
-*   **Génération d'un mot** : $O(L)$ où $L$ est la longueur du template (négligeable et constant).
-*   **Validation d'un mot** : $O(S \times \log N)$, où $S$ est le nombre de schèmes (on teste tous les schèmes potentiels) et $\log N$ est la vérification de la racine.
-
-## 5. Fonctionnalités et Interface
-
-### 5.1 Interface Ligne de Commande (CLI) - 100% Conforme
-Le programme principal (`src/main.cpp`) offre un menu interactif complet :
-*   Gestion complète des Racines (Ajout, **Suppression**, Recherche).
-*   Gestion complète des Schèmes (Ajout, Modification, Suppression).
-*   Génération et Validation.
-*   Mini-jeu interactif en mode console.
-
-### 5.2 Extensions : Interface Graphique et Jeu (Bonus)
-Pour enrichir l'interaction utilisateur (comme suggéré dans le cahier des charges), nous avons développé une interface Web moderne (Angular + Node.js) :
-*   **Design Premium** : Utilisation de "Glassmorphism", animations fluides et police "Cairo".
-*   **Jeu Éducatif Amélioré** :
-    *   Série de **6 questions** (mise à jour demandée).
-    *   Affichage du **score final** et messages d'encouragement.
-    *   Feedback visuel immédiat (vert/rouge).
-
-## 6. Difficultés Rencontrées et Solutions
-1.  **Gestion de l'Unicode (Arabe)** : Le C++ gère mal l'UTF-8 nativement. Nous avons utilisé `std::u32string` pour manipuler les caractères arabes sans casser les octets.
-2.  **Collisions dans la Table de Hachage** : Résolu par l'implémentation robuste du sondage linéaire et du redimensionnement.
-3.  **Fuites de Mémoire** : Corrigées par l'ajout de destructeurs récursifs dans la classe AVL.
-4.  **Intégration API (Windows)** : Problèmes de chemins de fichiers absolus et JSON parsing.
-
-## Conclusion
-Le projet répond à **toutes les exigences fonctionnelles et techniques** du sujet. L'ajout de l'interface graphique et du jeu complet constitue une plus-value significative, démontrant l'extensibilité du moteur morphologique développé.
+4.3 Algorithmes morphologiques
+Application du gabarit → O(m) : par rapport à la longueur m du template 
+Extraction de la racine → O(n) : par rapport à la longueur n du mot donné 
+Validation complète → O(k × m) avec k : nombre de schèmes  
+Génération par schème → O(m) par rapport à la longueur m du template 
+5. Principales difficultés rencontrées
+5.1 Gestion de l'encodage unicode (UTF-8/UTF-32)
+Les caractères arabes occupent entre deux et quatre octets en UTF-8. L'accès par index simple retourne un octet brut, pas un caractère complet, ce qui corrompt les données.
+5.2 Normalisation morphologique de l'Arabe
+Une même lettre arabe possède plusieurs variantes graphiques selon le contexte (début, milieu, fin de mot) et les signes diacritiques. Par exemple, l'alif peut apparaître sous cinq formes différentes qui doivent être traitées comme identiques.
+5.3 Affichage du droite à gauche dans le terminal
+L'arabe s'écrit de droite à gauche, cela produit des affichages désordonnés où les caractères apparaissent dans le désordre.
+5.4 Séparation des préoccupations (Architecture)
+Le code initial mélange le traitement morphologique, les entrées-sorties console et la gestion des fichiers, rendant le code difficile à tester et à étendre.
+6. Extension : Mini-Jeu morphologique éducatif
+Le jeu teste la compréhension des patterns morphologiques arabes par l'utilisateur. Le système génère aléatoirement cinq questions à partir des données disponibles dans l'AVL et la table de hachage. Il sélectionne aléatoirement une racine et un schème, puis, il génère le mot dérivé par application du template et construit les options fausses en sélectionnant d'autres racines ou schèmes aléatoires. 

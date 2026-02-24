@@ -1,6 +1,37 @@
-# --- Moteur Morphologique Arabe ---
+# ============================================================
+# .gitignore — Moteur Morphologique Arabe
+# ============================================================
 
-# Node/Next.js (Frontend)
+# ── Build / Compilation ─────────────────────────────────────
+build/
+
+# Compiled binaries (si build/ n'est pas ignoré globalement)
+*.exe
+*.out
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+
+# ── CMake ────────────────────────────────────────────────────
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+_CPack_Packages/
+*.cmake
+!CMakeLists.txt
+
+# ── Node.js / NPM (racine + frontend) ───────────────────────
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Next.js (frontend) ──────────────────────────────────────
 frontend/.next/
 frontend/out/
 frontend/dist/
@@ -8,36 +39,29 @@ frontend/node_modules/
 frontend/.env*.local
 frontend/npm-debug.log*
 
-# C++ / CMake (Backend)
-# Note: Currently build/ is tracked locally and on remote as requested.
-# To ignore FUTURE artifacts but keep existing, we leave it as is or use specific rules.
-build/CMakeFiles/
-build/CMakeCache.txt
-build/Makefile
-build/cmake_install.cmake
-build/moteur_tests
-build/moteur_cli
-build/moteur_tui
-build/morpho_api_server
-# (We add the binaries above just in case they were not already tracked, 
-# but usually, standard practice is to ignore the whole build folder)
-# build/
+# ── Environnement ────────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Root Level Dependencies
-node_modules/
-package-lock.json (Optional: usually tracked)
-!.gitignore
-
-# IDE / OS Specific
+# ── IDE / Éditeurs ───────────────────────────────────────────
 .vscode/
 .idea/
-.DS_Store
-Thumbs.db
-*.swp
 *.sublime-project
 *.sublime-workspace
+*.swp
+*.swo
+*~
 
-# Logs & Temporary Files
+# ── OS spécifique ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ── Logs & fichiers temporaires ──────────────────────────────
 *.log
 tmp/
 temp/

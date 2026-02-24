@@ -374,57 +374,61 @@ CMakeFiles/moteur_cli.dir/src/cli_main.cpp.o: ../src/cli_main.cpp \
   /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
   /usr/include/c++/11/bits/charconv.h \
   /usr/include/c++/11/bits/basic_string.tcc \
-  ../include/hash_table.h \
-  ../include/morpho.h \
-  ../include/hash_table.h \
+  ../include/arabic_display.h \
   ../include/unicode_utils.h \
   /usr/include/c++/11/stdexcept \
   /usr/include/c++/11/exception \
   /usr/include/c++/11/bits/exception_ptr.h \
   /usr/include/c++/11/bits/cxxabi_init_exception.h \
   /usr/include/c++/11/bits/nested_exception.h \
-  ../include/unicode_utils.h \
-  /usr/include/c++/11/fstream \
-  /usr/include/c++/11/istream \
-  /usr/include/c++/11/ios \
+  /usr/include/c++/11/iomanip \
   /usr/include/c++/11/bits/ios_base.h \
   /usr/include/c++/11/bits/locale_classes.h \
   /usr/include/c++/11/bits/locale_classes.tcc \
   /usr/include/c++/11/system_error \
   /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
-  /usr/include/c++/11/streambuf \
-  /usr/include/c++/11/bits/streambuf.tcc \
-  /usr/include/c++/11/bits/basic_ios.h \
+  /usr/include/c++/11/locale \
   /usr/include/c++/11/bits/locale_facets.h \
   /usr/include/c++/11/cwctype \
   /usr/include/wctype.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_base.h \
+  /usr/include/c++/11/streambuf \
+  /usr/include/c++/11/bits/streambuf.tcc \
   /usr/include/c++/11/bits/streambuf_iterator.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
   /usr/include/c++/11/bits/locale_facets.tcc \
-  /usr/include/c++/11/bits/basic_ios.tcc \
-  /usr/include/c++/11/ostream \
-  /usr/include/c++/11/bits/ostream.tcc \
-  /usr/include/c++/11/bits/istream.tcc \
-  /usr/include/c++/11/bits/codecvt.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
-  /usr/include/c++/11/bits/fstream.tcc \
-  /usr/include/c++/11/iomanip \
-  /usr/include/c++/11/locale \
   /usr/include/c++/11/bits/locale_facets_nonio.h \
   /usr/include/c++/11/ctime \
   /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
   /usr/include/libintl.h \
+  /usr/include/c++/11/bits/codecvt.h \
   /usr/include/c++/11/bits/locale_facets_nonio.tcc \
   /usr/include/c++/11/bits/locale_conv.h \
   /usr/include/c++/11/bits/unique_ptr.h \
   /usr/include/c++/11/bits/quoted_string.h \
   /usr/include/c++/11/sstream \
+  /usr/include/c++/11/istream \
+  /usr/include/c++/11/ios \
+  /usr/include/c++/11/bits/basic_ios.h \
+  /usr/include/c++/11/bits/basic_ios.tcc \
+  /usr/include/c++/11/ostream \
+  /usr/include/c++/11/bits/ostream.tcc \
+  /usr/include/c++/11/bits/istream.tcc \
   /usr/include/c++/11/bits/sstream.tcc \
   /usr/include/c++/11/iostream \
+  ../include/hash_table.h \
+  ../include/morpho.h \
+  ../include/hash_table.h \
+  ../include/unicode_utils.h \
+  /usr/include/c++/11/algorithm \
+  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
+  /usr/include/c++/11/fstream \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
+  /usr/include/c++/11/bits/fstream.tcc \
   /usr/include/c++/11/limits
 
 CMakeFiles/moteur_cli.dir/src/hash_table.cpp.o: ../src/hash_table.cpp \
@@ -822,9 +826,29 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/limits:
 
+/usr/include/c++/11/bits/fstream.tcc:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h:
+
+../include/morpho.h:
+
+/usr/include/c++/11/bits/istream.tcc:
+
+/usr/include/c++/11/bits/basic_ios.tcc:
+
+/usr/include/c++/11/bits/basic_ios.h:
+
+/usr/include/c++/11/istream:
+
 /usr/include/c++/11/sstream:
 
 /usr/include/c++/11/bits/quoted_string.h:
+
+/usr/include/c++/11/ostream:
+
+/usr/include/c++/11/bits/unique_ptr.h:
 
 /usr/include/c++/11/bits/locale_conv.h:
 
@@ -834,27 +858,11 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/bits/locale_facets_nonio.h:
 
-/usr/include/c++/11/bits/fstream.tcc:
-
-/usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h:
-
-/usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h:
-
-/usr/include/c++/11/bits/istream.tcc:
-
-/usr/include/c++/11/bits/unique_ptr.h:
-
-/usr/include/c++/11/ostream:
-
-/usr/include/c++/11/bits/basic_ios.tcc:
-
 /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h:
 
 /usr/include/c++/11/bits/streambuf_iterator.h:
 
 /usr/include/c++/11/bits/locale_facets.h:
-
-/usr/include/c++/11/bits/basic_ios.h:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h:
 
@@ -864,8 +872,6 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/bits/ios_base.h:
 
-/usr/include/c++/11/istream:
-
 /usr/include/c++/11/bits/nested_exception.h:
 
 /usr/include/c++/11/exception:
@@ -874,7 +880,7 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 ../include/unicode_utils.h:
 
-../include/morpho.h:
+../include/arabic_display.h:
 
 ../src/cli_main.cpp:
 
@@ -1056,6 +1062,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/debug/assertions.h:
 
+/usr/include/c++/11/pstl/execution_defs.h:
+
 /usr/include/x86_64-linux-gnu/bits/wordsize.h:
 
 /usr/include/c++/11/bits/move.h:
@@ -1102,9 +1110,9 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/debug/debug.h:
 
-/usr/include/c++/11/ctime:
-
 /usr/include/c++/11/bits/codecvt.h:
+
+/usr/include/c++/11/ctime:
 
 /usr/include/x86_64-linux-gnu/bits/time64.h:
 
@@ -1178,6 +1186,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 
 /usr/include/c++/11/bits/hashtable_policy.h:
 
+/usr/include/c++/11/algorithm:
+
 /usr/include/c++/11/iostream:
 
 /usr/include/c++/11/backward/binders.h:
@@ -1225,6 +1235,8 @@ CMakeFiles/moteur_cli.dir/src/morpho.cpp.o: ../src/morpho.cpp \
 /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:
+
+/usr/include/c++/11/pstl/glue_algorithm_defs.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/time_t.h:
 

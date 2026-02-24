@@ -3,8 +3,15 @@ project(MoteurMorphologiqueArabe VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # utile pour les IDE / clangd
 
 find_package(Threads REQUIRED)
+
+# ===== Chemin absolu vers les données =====
+# Permet aux exécutables de trouver data/ quel que soit le répertoire de lancement
+add_compile_definitions(
+    DATA_DIR="${CMAKE_SOURCE_DIR}/data"
+)
 
 # ===== SOURCES COMMUNES (structures de données + moteur morphologique) =====
 set(CORE_SOURCES
@@ -39,6 +46,11 @@ add_executable(morpho_api_server
 target_include_directories(morpho_api_server PRIVATE include)
 target_link_libraries(morpho_api_server PRIVATE Threads::Threads)
 
+# Sur Windows, lier ws2_32 pour les sockets (Winsock2)
+if(WIN32)
+    target_link_libraries(morpho_api_server PRIVATE ws2_32)
+endif()
+
 # ===== EXÉCUTABLE 4 : Tests unitaires =====
 add_executable(moteur_tests
     src/tests.cpp
@@ -53,14 +65,27 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     endforeach()
 elseif(MSVC)
     foreach(target moteur_cli moteur_tui morpho_api_server moteur_tests)
+        # /utf-8 : encodage source + exécution en UTF-8 (essentiel pour l'arabe)
         target_compile_options(${target} PRIVATE /W4 /O2 /utf-8)
     endforeach()
 endif()
+
+# ===== Copie automatique du dossier data/ dans build/ =====
+# Permet d'exécuter les binaires directement depuis build/ sans chemin relatif
+add_custom_command(
+    TARGET moteur_cli POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/data"
+            "$<TARGET_FILE_DIR:moteur_cli>/data"
+    COMMENT "Copie de data/ vers le repertoire de sortie"
+)
 
 # ===== INSTALLATION =====
 install(TARGETS morpho_api_server moteur_cli moteur_tui
     RUNTIME DESTINATION bin
 )
+install(DIRECTORY data/ DESTINATION share/moteur-morphologique/data)
 
-message(STATUS "Configuration terminee")
-message(STATUS "  Cibles: moteur_cli, moteur_tui, morpho_api_server, moteur_tests")
+message(STATUS "Configuration terminée pour : ${CMAKE_SYSTEM_NAME}")
+message(STATUS "  Compilateur : ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "  Cibles      : moteur_cli, moteur_tui, morpho_api_server, moteur_tests")
