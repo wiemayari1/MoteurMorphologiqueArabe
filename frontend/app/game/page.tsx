@@ -1,4 +1,3 @@
-// frontend/app/game/page.tsx - VERSION CORRIGÉE
 "use client";
 
 import { useEffect, useState } from "react";
