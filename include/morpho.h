@@ -7,7 +7,7 @@
 #include <vector>
 
 // ============================================================================
-// OPTIONAL MANUEL (remplace std::optional C++17)
+// OPTIONAL MANUEL 
 // ============================================================================
 template <typename T> struct Optional {
   bool has_value;
