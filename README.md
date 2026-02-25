@@ -130,6 +130,114 @@ cd build
 
 ---
 
+## Interface Web (Frontend)
+
+Le projet intègre une interface web complète construite avec **Next.js 14** (React + TypeScript), communiquant avec le serveur C++ via des appels HTTP/JSON.
+
+### Stack technique
+
+| Technologie | Version | Rôle |
+|-------------|---------|------|
+| **Next.js** | 14.2.5 | Framework React (App Router) |
+| **React** | 18.3 | Bibliothèque UI |
+| **TypeScript** | 5.x | Typage statique |
+| **Tailwind CSS** | 3.4 | Styles utilitaires |
+| **Radix UI** | 1.x–2.x | Composants accessibles (Dialog, Toast, Dropdown…) |
+| **Recharts** | 2.13 | Graphiques (fréquences de racines) |
+| **Lucide React** | 0.460 | Icônes |
+
+### Pages disponibles
+
+| Route | Fichier | Description |
+|-------|---------|-------------|
+| `/` | `app/page.tsx` | Tableau de bord — statistiques globales |
+| `/roots` | `app/roots/page.tsx` | Gestion des racines (liste, ajout, suppression) |
+| `/schemes` | `app/schemes/page.tsx` | Gestion des schèmes (liste, ajout, modification, suppression) |
+| `/generate` | `app/generate/page.tsx` | Génération d'un mot à partir d'une racine + schème |
+| `/validate` | `app/validate/page.tsx` | Validation morphologique d'un mot |
+| `/game` | `app/game/page.tsx` | Mini-jeu morphologique interactif (QCM) |
+
+### Architecture frontend
+
+```
+frontend/
+├── app/                   Pages Next.js (App Router)
+│   ├── page.tsx           Dashboard principal
+│   ├── roots/             CRUD racines
+│   ├── schemes/           CRUD schèmes
+│   ├── generate/          Générer un mot
+│   ├── validate/          Valider un mot
+│   ├── game/              Mini-jeu QCM
+│   ├── layout.tsx         Layout global (navbar, RTL)
+│   └── globals.css        Styles globaux (Tailwind)
+├── components/
+│   ├── layout/            Navbar, Sidebar
+│   └── ui/                Composants réutilisables (Button, Card, Toast…)
+├── lib/
+│   ├── api.ts             Fonctions d'appel à l'API C++
+│   └── types.ts           Types TypeScript partagés
+├── .env.local             Variable d'environnement (URL de l'API)
+└── package.json
+```
+
+### Communication avec l'API C++
+
+Toutes les requêtes vers le backend sont centralisées dans `frontend/lib/api.ts`. L'URL de base est configurée via la variable d'environnement :
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+**Exemples d'appels API :**
+
+```typescript
+// Lister toutes les racines
+GET  /api/roots
+
+// Ajouter une racine
+POST /api/roots          { "root": "كتب" }
+
+// Supprimer un schème
+DELETE /api/schemes/:name
+
+// Générer un mot
+POST /api/generate        { "root": "كتب", "scheme": "مفعول" }
+→ Réponse: { "success": true, "word": "مكتوب" }
+
+// Valider un mot
+POST /api/validate        { "word": "مكتوب", "root": "كتب" }
+→ Réponse: { "valid": true, "scheme": "مفعول" }
+
+// Obtenir une question du jeu
+GET  /api/game/question
+→ Réponse: { "word": "...", "type": "find_root", "options": [...], "correct_answer": "..." }
+```
+
+### Lancer l'interface graphique
+
+#### 1. Lancer le serveur API C++
+```bash
+cd build && cmake .. && make
+./morpho_api_server 3001
+```
+
+#### 2. Lancer le frontend Next.js
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+L'interface est alors accessible sur **http://localhost:3000**.
+
+> **Note :** Le serveur C++ doit être lancé en premier sur le port **3001** pour que le frontend puisse s'y connecter (configuré dans `.env.local`).
+
+### Direction du texte (RTL)
+
+L'interface est configurée pour supporter l'arabe en **sens de lecture droite-à-gauche (RTL)**. Les textes arabes (racines, schèmes, mots générés) sont affichés avec l'attribut `dir="rtl"` pour un rendu correct dans le navigateur.
+
+---
+
 ## Licence
 
 Distribué sous la licence Apache-2.0. Voir le fichier [LICENSE](LICENSE).
