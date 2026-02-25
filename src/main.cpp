@@ -52,7 +52,7 @@ static string read_file_utf8(const string &path) {
 }
 
 int main(int argc, char **argv) {
-  // CORRECTION: Arguments optionnels avec valeurs par défaut comme cli_main.cpp
+  
   string roots_path = "data/roots.txt";
   string schemes_path = "data/schemes.txt";
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   AVLTree tree;
   HashTable ht(2048);
 
-  // CORRECTION: Afficher les fichiers utilisés
+  // Afficher les fichiers utilisés
   clear_screen();
   print_logo();
   cout << "\nChargement des données...\n";
@@ -85,10 +85,10 @@ int main(int argc, char **argv) {
       while (getline(in, line)) {
         if (line.empty())
           continue;
-        // CORRECTION: Gérer les fins de ligne Windows
+        // Gérer les fins de ligne Windows
         if (!line.empty() && line.back() == '\r')
           line.pop_back();
-        // CORRECTION: Ignorer les commentaires
+        //Ignorer les commentaires
         if (line.empty() || line[0] == '#')
           continue;
 
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Chargement des schémas - CORRECTION PRINCIPALE ICI
+  // Chargement des schémas 
   {
     string content = read_file_utf8(schemes_path);
     if (content.empty()) {
@@ -116,7 +116,6 @@ int main(int argc, char **argv) {
       while (getline(in, line)) {
         if (line.empty())
           continue;
-        // CORRECTION: Gérer les fins de ligne Windows
         if (!line.empty() && line.back() == '\r')
           line.pop_back();
         // CORRECTION: Ignorer les commentaires
@@ -132,7 +131,7 @@ int main(int argc, char **argv) {
         string name = line.substr(0, pos);
         string templ = line.substr(pos + 1);
 
-        // CORRECTION CRITIQUE: Trim des espaces blancs
+        // Trim des espaces blancs
         name.erase(0, name.find_first_not_of(" \t\r\n"));
         name.erase(name.find_last_not_of(" \t\r\n") + 1);
         templ.erase(0, templ.find_first_not_of(" \t\r\n"));
@@ -146,7 +145,7 @@ int main(int argc, char **argv) {
         auto name_u32 = unicode::utf8_to_u32(name);
         auto templ_u32 = unicode::utf8_to_u32(templ);
 
-        // CORRECTION: Vérifier que le template contient ف, ع, ل
+        // Vérifier que le template contient ف, ع, ل
         bool has_f = false, has_e = false, has_l = false;
         for (char32_t c : templ_u32) {
           if (c == U'ف')
@@ -265,7 +264,7 @@ int main(int argc, char **argv) {
     } else if (choix == 3) {
       cout << "\033[1;33m[ Liste des schèmes ]\033[0m\n\n";
 
-      // CORRECTION: Utiliser allSchemes() correctement
+    
       auto all_schemes = ht.allSchemes();
 
       if (all_schemes.empty()) {
