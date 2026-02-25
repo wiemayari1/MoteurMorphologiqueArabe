@@ -47,7 +47,7 @@ inline void print_ar_ln(const std::string &utf8_str,
 }
 
 /**
- * Pour les vecteurs UTF-32 (utilisés dans votre code)
+ * Pour les vecteurs UTF-32 
  */
 inline void print_ar_u32(const std::vector<char32_t> &u32_str,
                          const std::string &color = "") {
