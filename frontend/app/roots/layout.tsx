@@ -1,4 +1,4 @@
-// frontend/app/roots/layout.tsx - VERSION CORRIGÉE
+ 
 export const metadata = {
     title: 'إدارة الجذور',
     description: 'أضف وحذف الجذور العربية',
