@@ -1,4 +1,3 @@
-// frontend/app/generate/page.tsx - VERSION CORRIGÉE COMPLÈTE
 "use client";
 
 import { useState, useEffect } from "react";
