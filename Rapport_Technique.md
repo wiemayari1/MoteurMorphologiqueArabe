@@ -87,4 +87,4 @@ L'algorithme de validation vérifie si un mot donné peut être dérivé d'une r
 
 ### 6. Extension : Mini-Jeu morphologique éducatif
 
-Le jeu teste la compréhension des patterns morphologiques arabes. Le système génère aléatoirement cinq questions en sélectionnant une racine et un schème, produit le mot dérivé, et construit des options fausses (distracteurs) pour solliciter les connaissances linguistiques de l'utilisateur.
+Le jeu teste la compréhension des patterns morphologiques arabes. Le système génère aléatoirement six questions en sélectionnant une racine et un schème, produit le mot dérivé, et construit des options fausses (distracteurs) pour solliciter les connaissances linguistiques de l'utilisateur.
