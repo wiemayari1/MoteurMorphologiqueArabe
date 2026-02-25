@@ -181,9 +181,6 @@ void show_menu() {
 // ============================================================================
 // 1. GENERATION DE MOT (RACINE + SCHEME)
 // ============================================================================
-// ============================================================================
-// 1. GENERATION DE MOT (RACINE + SCHEME) - CORRIGÉ
-// ============================================================================
 void generate_word(AVLTree &avl, HashTable &ht) {
   clear_screen();
   print_header("GENERATION DE MOT DERIVE");
@@ -225,8 +222,7 @@ void generate_word(AVLTree &avl, HashTable &ht) {
   string scheme_utf8;
   getline(cin, scheme_utf8);
 
-  // CORRECTION : Ne pas normaliser l'entrée, l'utilisateur tape déjà
-  // correctement On convertit juste en UTF-32 sans inversion
+ 
   auto sname = unicode::utf8_to_u32(scheme_utf8);
 
   // Optionnel : normaliser pour enlever les diacritiques si nécessaire
@@ -734,7 +730,7 @@ void generate_family(AVLTree &avl, HashTable &ht) {
 }
 
 // ============================================================================
-// MINI-JEU MORPHOLOGIQUE - VERSION CORRIGÉE
+// MINI-JEU MORPHOLOGIQUE 
 // ============================================================================
 void play_minigame(const vector<vector<char32_t>> &roots,
                    const vector<vector<char32_t>> &scheme_names,
