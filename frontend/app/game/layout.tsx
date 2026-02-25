@@ -1,4 +1,3 @@
-// frontend/app/game/layout.tsx - VERSION CORRIGÉE
 export const metadata = {
   title: 'اللعبة التعليمية',
   description: 'اختبر معرفتك الصرفية',
