@@ -1,4 +1,3 @@
-// frontend/app/schemes/page.tsx - VERSION CORRIGÉE AVEC ID
 "use client";
 
 import { useEffect, useState } from "react";
