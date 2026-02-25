@@ -1,4 +1,4 @@
-// frontend/app/schemes/layout.tsx - VERSION CORRIGÉE
+// frontend/app/schemes/layout.tsx 
 export const metadata = {
   title: 'إدارة الأوزان',
   description: 'أضف وعدل الأوزان الصرفية مع قواعد التحويل',
