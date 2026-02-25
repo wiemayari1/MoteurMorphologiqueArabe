@@ -1,4 +1,4 @@
-// frontend/lib/api.ts - VERSION CORRIGÉE COMPLÈTE ET FINALE
+// frontend/lib/api.ts 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // ==================== INTERFACES ====================
@@ -243,7 +243,7 @@ export async function addScheme(scheme: {
   });
 }
 
-// CORRECTION: Update scheme par ID (manquait !)
+// Update scheme par ID 
 export async function updateScheme(
   id: number,
   scheme: {
@@ -362,7 +362,7 @@ export async function validateWord(
     }),
   });
 
-  // CORRECTION CRITIQUE: Convertir valid en boolean de manière robuste
+  // Convertir valid en boolean de manière robuste
   if (response.data) {
     const validValue = response.data.valid;
     let isValid = false;
@@ -388,7 +388,7 @@ export async function validateWord(
   return response;
 }
 
-// ==================== API GAME - CORRIGÉ ====================
+// ==================== API GAME ====================
 
 export async function getGameQuestions(): Promise<ApiResponse<{
   questions: GameQuestion[];
@@ -410,7 +410,7 @@ export async function submitAnswer(
     }),
   });
 
-  // CORRECTION: Normaliser le boolean correct
+  // Normaliser le boolean correct
   if (response.data) {
     const correctValue = response.data.correct;
     let isCorrect = false;
