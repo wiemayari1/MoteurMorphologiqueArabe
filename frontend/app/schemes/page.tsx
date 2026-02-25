@@ -67,7 +67,7 @@ export default function SchemesPage() {
     setAdding(false);
   };
 
-  // CORRECTION: Utiliser l'ID (number) au lieu du nom (string)
+  // Utiliser l'ID (number) au lieu du nom (string)
   const handleDelete = async (id: number, name: string) => {
     if (!confirm(`هل أنت متأكد من حذف الوزن "${name}"؟`)) {
       return;
@@ -99,7 +99,7 @@ export default function SchemesPage() {
     setEditData({ name: "", pattern: "", rule: "" });
   };
 
-  // CORRECTION: Utiliser l'ID (number) au lieu du nom (string)
+  // Utiliser l'ID (number) au lieu du nom (string)
   const handleUpdate = async (id: number) => {
     setError("");
     setSuccess("");
