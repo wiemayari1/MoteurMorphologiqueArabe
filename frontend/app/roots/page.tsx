@@ -73,7 +73,7 @@ export default function RootsPage() {
     setAdding(false);
   };
 
-  // CORRECTION: Utiliser deleteRootByValue avec la valeur arabe
+  // Utiliser deleteRootByValue avec la valeur arabe
   const handleDelete = async (id: number, value: string) => {
     if (!confirm(`هل أنت متأكد من حذف الجذر "${value}"؟`)) {
       return;
