@@ -28,7 +28,7 @@ inline void print_ar(const std::string &utf8_str,
   // Convertir en UTF-32
   auto u32 = unicode::utf8_to_u32(utf8_str);
 
-  // Afficher en ordre inverse (compenser le RTL)
+  // Afficher en ordre inverse 
   for (int i = (int)u32.size() - 1; i >= 0; --i) {
     std::cout << unicode::u32_to_utf8(std::vector<char32_t>{u32[i]});
   }
@@ -38,7 +38,7 @@ inline void print_ar(const std::string &utf8_str,
 }
 
 /**
- * Version avec retour à la ligne
+ * avec retour à la ligne
  */
 inline void print_ar_ln(const std::string &utf8_str,
                         const std::string &color = "") {
