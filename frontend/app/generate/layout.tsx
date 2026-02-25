@@ -1,4 +1,3 @@
-// frontend/app/generate/layout.tsx - VERSION CORRIGÉE
 export const metadata = {
   title: 'توليد الكلمات',
   description: 'ولد جميع الكلمات المشتقة من جذر معين',
