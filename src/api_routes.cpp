@@ -11,7 +11,7 @@
 namespace morpho {
 
 // ============================================================================
-// MAP MANUELLE (remplace std::map)
+// MAP MANUELLE 
 // ============================================================================
 struct MapNode {
   std::string key;
@@ -249,7 +249,7 @@ std::vector<std::string> parseJsonArray(const std::string &arr) {
 }
 
 // ============================================================================
-// STOCKAGE DES QUESTIONS DE JEU (pour validation des réponses)
+// STOCKAGE DES QUESTIONS DE JEU (pour la validation des réponses)
 // ============================================================================
 struct GameQuestionData {
   int id;
@@ -749,7 +749,7 @@ void registerRoutes(HttpServer &server, AVLTree &roots, HashTable &schemes) {
             std::to_string(allRoots.size() * allSchemes.size()) + "\"}");
       });
 
-  // ----- JEU - ANSWER ----- (CORRIGÉ !)
+  // ----- JEU - ANSWER 
   server.post("/api/game/answer",
               [](const std::string &, const std::string &,
                  const std::string &body,
