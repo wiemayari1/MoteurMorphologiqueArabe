@@ -304,7 +304,7 @@ AVLNode *AVLTree::remove(AVLNode *node, const std::vector<char32_t> &key,
 }
 
 // ============================================================================
-// SUPPRESSION PUBLIQUE (wrapper)
+// SUPPRESSION PUBLIQUE 
 // ============================================================================
 
 void AVLTree::remove(const std::vector<char32_t> &key) {
