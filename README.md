@@ -110,7 +110,7 @@ make
 
 ```bash
 cd build
-./moteur_cli ../data/roots.txt ../data/schemes.txt
+./moteur_cli 
 ```
 
 ---
