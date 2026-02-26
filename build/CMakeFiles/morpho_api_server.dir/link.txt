@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/morpho_api_server.dir/src/server_main.cpp.o CMakeFiles/morpho_api_server.dir/src/http_server.cpp.o CMakeFiles/morpho_api_server.dir/src/api_routes.cpp.o CMakeFiles/morpho_api_server.dir/src/AVL.cpp.o CMakeFiles/morpho_api_server.dir/src/hash_table.cpp.o CMakeFiles/morpho_api_server.dir/src/morpho.cpp.o -o morpho_api_server 
