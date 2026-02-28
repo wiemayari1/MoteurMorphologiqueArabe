@@ -10,9 +10,6 @@
 
 namespace morpho {
 
-// ============================================================================
-// MAP MANUELLE 
-// ============================================================================
 struct MapNode {
   std::string key;
   std::string value;
@@ -167,7 +164,7 @@ std::string errorResponse(const std::string &message) {
 }
 
 // ============================================================================
-// PARSE JSON MANUEL
+// PARSE JSON 
 // ============================================================================
 SimpleMap parseJson(const std::string &json) {
   SimpleMap result;
