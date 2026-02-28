@@ -1,9 +1,5 @@
 #include "AVL.h"
 
-// ============================================================================
-// UTILITAIRES ALGORITHMIQUES MANUELS
-// ============================================================================
-
 static int max_int(int a, int b) { return (a > b) ? a : b; }
 
 static bool vector_equals(const std::vector<char32_t> &a,
