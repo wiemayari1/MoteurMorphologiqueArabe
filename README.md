@@ -150,12 +150,12 @@ Le projet intègre une interface web complète construite avec **Next.js 14** (R
 
 | Route | Fichier | Description |
 |-------|---------|-------------|
-| `/` | `app/page.tsx` | Tableau de bord — statistiques globales |
+| `/` | `app/page.tsx` | Tableau de bord |
 | `/roots` | `app/roots/page.tsx` | Gestion des racines (liste, ajout, suppression) |
 | `/schemes` | `app/schemes/page.tsx` | Gestion des schèmes (liste, ajout, modification, suppression) |
 | `/generate` | `app/generate/page.tsx` | Génération d'un mot à partir d'une racine + schème |
 | `/validate` | `app/validate/page.tsx` | Validation morphologique d'un mot |
-| `/game` | `app/game/page.tsx` | Mini-jeu morphologique interactif (QCM) |
+| `/game` | `app/game/page.tsx` | Mini-jeu morphologique interactif |
 
 ### Architecture frontend
 
@@ -231,13 +231,3 @@ npm run dev
 L'interface est alors accessible sur **http://localhost:3000**.
 
 > **Note :** Le serveur C++ doit être lancé en premier sur le port **3001** pour que le frontend puisse s'y connecter (configuré dans `.env.local`).
-
-### Direction du texte (RTL)
-
-L'interface est configurée pour supporter l'arabe en **sens de lecture droite-à-gauche (RTL)**. Les textes arabes (racines, schèmes, mots générés) sont affichés avec l'attribut `dir="rtl"` pour un rendu correct dans le navigateur.
-
----
-
-## Licence
-
-Distribué sous la licence Apache-2.0. Voir le fichier [LICENSE](LICENSE).
