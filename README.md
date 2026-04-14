@@ -232,5 +232,5 @@ L'interface est alors accessible sur **http://localhost:3000**.
 
 > **Note :** Le serveur C++ doit être lancé en premier sur le port **3001** pour que le frontend puisse s'y connecter (configuré dans `.env.local`).
 
-##Auteurs: AYARI Wiem & SAKROUFI Aya
+## Auteurs: AYARI Wiem & SAKROUFI Aya
  
