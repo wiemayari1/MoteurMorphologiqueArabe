@@ -1,90 +1,90 @@
-# Moteur Morphologique Arabe
+# Arabic Morphology Engine
 
-La langue arabe repose sur un système morphologique appelé **racine–schème** (Root–Pattern) : les mots ne se forment pas par ajout de préfixes ou de suffixes, mais en insérant une racine consonantique dans un schème morphologique abstrait.
+The Arabic language is based on a morphological system called **Root–Pattern**: words are not formed by adding prefixes or suffixes, but by inserting a consonantal root into an abstract morphological pattern.
 
-Par exemple, la racine **ك–ت–ب** (écrire) combinée au schème **مفعول** donne **مكتوب** (écrit), et avec **فاعل** donne **كاتب** (écrivain).
+For example, the root **ك–ت–ب** (to write) combined with the pattern **مفعول** gives **مكتوب** (written), and with **فاعل** gives **كاتب** (writer).
 
-Ce projet implémente un moteur capable d'exploiter ce mécanisme de manière algorithmique :
-- les racines trilitères sont indexées dans un **arbre AVL** pour une recherche en O(log n),
-- les schèmes morphologiques sont stockés dans une **table de hachage** pour un accès direct,
-- le moteur peut **générer** des mots dérivés à partir d'une racine et d'un schème, et **valider** si un mot appartient morphologiquement à une racine donnée.
+This project implements an engine capable of exploiting this mechanism algorithmically:
+- trilateral roots are indexed in an **AVL tree** for O(log n) search,
+- morphological patterns are stored in a **hash table** for direct access,
+- the engine can **generate** derived words from a root and a pattern, and **validate** whether a word morphologically belongs to a given root.
 
-Le tout est écrit en **C++17**, sans bibliothèque externe, avec une prise en charge native de l'encodage **UTF-8/UTF-32** pour les caractères arabes.
+The whole project is written in **C++17**, with no external library, with native support for **UTF-8/UTF-32** encoding for Arabic characters.
 
 ---
 
-## Fonctionnalités implémentées
+## Implemented Features
 
-Conformément au cahier des charges, le projet couvre les cinq fonctionnalités principales :
+In accordance with the specifications, the project covers the five main features:
 
-| Fonctionnalité | Implémentation |
+| Feature | Implementation |
 |---|---|
-| Gestion des racines (insertion, recherche, affichage) | Arbre AVL — `src/AVL.cpp` |
-| Gestion des schèmes morphologiques | Table de hachage — `src/hash_table.cpp` |
-| Génération morphologique (racine + schème → mot) | `apply_template()` — `src/morpho.cpp` |
-| Validation morphologique (mot → racine + schème) | `validate_word()` — `src/morpho.cpp` |
-| Gestion des dérivés validés par racine | Nœuds AVL avec liste de dérivés et fréquences |
+| Root management (insertion, search, display) | AVL tree — `src/AVL.cpp` |
+| Morphological pattern management | Hash table — `src/hash_table.cpp` |
+| Morphological generation (root + pattern → word) | `apply_template()` — `src/morpho.cpp` |
+| Morphological validation (word → root + pattern) | `validate_word()` — `src/morpho.cpp` |
+| Management of validated derivatives per root | AVL nodes with a list of derivatives and frequencies |
 
-**Fonctionnalités additionnelles :**
-- Mini-jeu morphologique interactif dans le CLI
-- Serveur API REST HTTP (sans dépendance externe)
-- Interface web (Next.js) avec pages de génération, validation et jeu
-
----
-
-## Structures de données
-
-- **Arbre AVL** : chaque nœud stocke une racine trilitère arabe, la liste de ses dérivés validés et leur fréquence d'apparition. Les comparaisons utilisent l'encodage UTF-32 pour un traitement correct des caractères arabes.
-- **Table de hachage** (adressage ouvert) : clé = nom du schème (ex. `مفعول`), valeur = représentation abstraite du schème avec sa règle de transformation algorithmique.
+**Additional features:**
+- Interactive morphological mini-game in the CLI
+- HTTP REST API server (no external dependency)
+- Web interface (Next.js) with generation, validation, and game pages
 
 ---
 
-## Exemple de génération
+## Data Structures
+
+- **AVL tree**: each node stores an Arabic trilateral root, the list of its validated derivatives, and their frequency of occurrence. Comparisons use UTF-32 encoding for correct processing of Arabic characters.
+- **Hash table** (open addressing): key = pattern name (e.g. `مفعول`), value = abstract representation of the pattern with its algorithmic transformation rule.
+
+---
+
+## Generation Example
 
 ```
-Racine  : ك–ت–ب
-Schème  : مفعول  (template : م–ف–ع–و–ل)
-Résultat: مكتوب
+Root    : ك–ت–ب
+Pattern : مفعول  (template: م–ف–ع–و–ل)
+Result  : مكتوب
 ```
 
-La convention de transformation est : `ف` → 1ʳᵉ lettre, `ع` → 2ᵉ lettre, `ل` → 3ᵉ lettre de la racine.
+The transformation convention is: `ف` → 1st letter, `ع` → 2nd letter, `ل` → 3rd letter of the root.
 
 ---
 
-## Structure du projet
+## Project Structure
 
 ```
 MoteurMorphologiqueArabe/
 ├── src/
-│   ├── AVL.cpp            Arbre AVL (gestion des racines)
-│   ├── hash_table.cpp     Table de hachage (schèmes)
-│   ├── morpho.cpp         Moteur de génération et de validation
-│   ├── cli_main.cpp       Interface CLI interactive
-│   ├── main.cpp           Interface TUI (menus colorés)
-│   ├── server_main.cpp    Point d'entrée du serveur API
-│   ├── http_server.cpp    Serveur HTTP minimal (sockets POSIX/Winsock2)
-│   ├── api_routes.cpp     Routes REST (génération, validation, jeu)
-│   └── tests.cpp          Tests unitaires
-├── include/               En-têtes C++
+│   ├── AVL.cpp            AVL tree (root management)
+│   ├── hash_table.cpp     Hash table (patterns)
+│   ├── morpho.cpp         Generation and validation engine
+│   ├── cli_main.cpp       Interactive CLI interface
+│   ├── main.cpp           TUI interface (colored menus)
+│   ├── server_main.cpp    API server entry point
+│   ├── http_server.cpp    Minimal HTTP server (POSIX/Winsock2 sockets)
+│   ├── api_routes.cpp     REST routes (generation, validation, game)
+│   └── tests.cpp          Unit tests
+├── include/               C++ headers
 ├── data/
-│   ├── roots.txt          Racines trilitères arabes
-│   ├── schemes.txt        Schèmes morphologiques
-│   └── derivatives.json   Dérivés validés par racine
-├── frontend/              Interface web Next.js
-├── CMakeLists.txt         Configuration CMake
-└── Makefile               Wrapper Make (Linux / WSL)
+│   ├── roots.txt          Arabic trilateral roots
+│   ├── schemes.txt        Morphological patterns
+│   └── derivatives.json   Validated derivatives per root
+├── frontend/              Next.js web interface
+├── CMakeLists.txt         CMake configuration
+└── Makefile               Make wrapper (Linux / WSL)
 ```
 
 ---
 
 ## Compilation
 
-### Prérequis
+### Prerequisites
 
-- **Ubuntu natif** : `build-essential`, `cmake` >= 3.14
-- **WSL (depuis PowerShell)** : mêmes outils, installés dans l'environnement Linux
+- **Native Ubuntu**: `build-essential`, `cmake` >= 3.14
+- **WSL (from PowerShell)**: same tools, installed in the Linux environment
 
-### Option 1 — Ubuntu natif
+### Option 1 — Native Ubuntu
 
 ```bash
 sudo apt update && sudo apt install -y build-essential cmake
@@ -92,7 +92,7 @@ cd MoteurMorphologiqueArabe
 make
 ```
 
-### Option 2 — WSL depuis PowerShell
+### Option 2 — WSL from PowerShell
 
 ```powershell
 wsl
@@ -106,7 +106,7 @@ make
 
 ---
 
-## Utilisation
+## Usage
 
 ```bash
 cd build
@@ -115,122 +115,121 @@ cd build
 
 ---
 
-## Commandes Make
+## Make Commands
 
-| Commande | Description |
+| Command | Description |
 |---|---|
-| `make` | Compile en mode Release |
-| `make debug` | Compile en mode Debug |
-| `make clean` | Supprime le répertoire `build/` |
-| `make run-cli` | Lance le CLI |
-| `make run-tui` | Lance le TUI interactif |
-| `make run-api` | Lance le serveur API |
-| `make run-tests` | Lance les tests unitaires |
-| `make frontend-dev` | Lance le serveur Next.js |
+| `make` | Compiles in Release mode |
+| `make debug` | Compiles in Debug mode |
+| `make clean` | Removes the `build/` directory |
+| `make run-cli` | Launches the CLI |
+| `make run-tui` | Launches the interactive TUI |
+| `make run-api` | Launches the API server |
+| `make run-tests` | Runs the unit tests |
+| `make frontend-dev` | Launches the Next.js server |
 
 ---
 
-## Interface Web (Frontend)
+## Web Interface (Frontend)
 
-Le projet intègre une interface web complète construite avec **Next.js 14** (React + TypeScript), communiquant avec le serveur C++ via des appels HTTP/JSON.
+The project integrates a complete web interface built with **Next.js 14** (React + TypeScript), communicating with the C++ server via HTTP/JSON calls.
 
-### Stack technique
+### Technical Stack
 
-| Technologie | Version | Rôle |
+| Technology | Version | Role |
 |-------------|---------|------|
-| **Next.js** | 14.2.5 | Framework React (App Router) |
-| **React** | 18.3 | Bibliothèque UI |
-| **TypeScript** | 5.x | Typage statique |
-| **Tailwind CSS** | 3.4 | Styles utilitaires |
-| **Radix UI** | 1.x–2.x | Composants accessibles (Dialog, Toast, Dropdown…) |
-| **Recharts** | 2.13 | Graphiques (fréquences de racines) |
-| **Lucide React** | 0.460 | Icônes |
+| **Next.js** | 14.2.5 | React framework (App Router) |
+| **React** | 18.3 | UI library |
+| **TypeScript** | 5.x | Static typing |
+| **Tailwind CSS** | 3.4 | Utility styles |
+| **Radix UI** | 1.x–2.x | Accessible components (Dialog, Toast, Dropdown…) |
+| **Recharts** | 2.13 | Charts (root frequencies) |
+| **Lucide React** | 0.460 | Icons |
 
-### Pages disponibles
+### Available Pages
 
-| Route | Fichier | Description |
+| Route | File | Description |
 |-------|---------|-------------|
-| `/` | `app/page.tsx` | Tableau de bord |
-| `/roots` | `app/roots/page.tsx` | Gestion des racines (liste, ajout, suppression) |
-| `/schemes` | `app/schemes/page.tsx` | Gestion des schèmes (liste, ajout, modification, suppression) |
-| `/generate` | `app/generate/page.tsx` | Génération d'un mot à partir d'une racine + schème |
-| `/validate` | `app/validate/page.tsx` | Validation morphologique d'un mot |
-| `/game` | `app/game/page.tsx` | Mini-jeu morphologique interactif |
+| `/` | `app/page.tsx` | Dashboard |
+| `/roots` | `app/roots/page.tsx` | Root management (list, add, delete) |
+| `/schemes` | `app/schemes/page.tsx` | Pattern management (list, add, edit, delete) |
+| `/generate` | `app/generate/page.tsx` | Generating a word from a root + pattern |
+| `/validate` | `app/validate/page.tsx` | Morphological validation of a word |
+| `/game` | `app/game/page.tsx` | Interactive morphological mini-game |
 
-### Architecture frontend
+### Frontend Architecture
 
 ```
 frontend/
-├── app/                   Pages Next.js (App Router)
-│   ├── page.tsx           Dashboard principal
-│   ├── roots/             CRUD racines
-│   ├── schemes/           CRUD schèmes
-│   ├── generate/          Générer un mot
-│   ├── validate/          Valider un mot
-│   ├── game/              Mini-jeu QCM
-│   ├── layout.tsx         Layout global (navbar, RTL)
-│   └── globals.css        Styles globaux (Tailwind)
+├── app/                   Next.js pages (App Router)
+│   ├── page.tsx           Main dashboard
+│   ├── roots/             Root CRUD
+│   ├── schemes/           Pattern CRUD
+│   ├── generate/          Generate a word
+│   ├── validate/          Validate a word
+│   ├── game/              Multiple-choice mini-game
+│   ├── layout.tsx         Global layout (navbar, RTL)
+│   └── globals.css        Global styles (Tailwind)
 ├── components/
 │   ├── layout/            Navbar, Sidebar
-│   └── ui/                Composants réutilisables (Button, Card, Toast…)
+│   └── ui/                Reusable components (Button, Card, Toast…)
 ├── lib/
-│   ├── api.ts             Fonctions d'appel à l'API C++
-│   └── types.ts           Types TypeScript partagés
-├── .env.local             Variable d'environnement (URL de l'API)
+│   ├── api.ts             C++ API call functions
+│   └── types.ts           Shared TypeScript types
+├── .env.local             Environment variable (API URL)
 └── package.json
 ```
 
-### Communication avec l'API C++
+### Communication with the C++ API
 
-Toutes les requêtes vers le backend sont centralisées dans `frontend/lib/api.ts`. L'URL de base est configurée via la variable d'environnement :
+All requests to the backend are centralized in `frontend/lib/api.ts`. The base URL is configured via the environment variable:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-**Exemples d'appels API :**
+**API call examples:**
 
 ```typescript
-// Lister toutes les racines
+// List all roots
 GET  /api/roots
 
-// Ajouter une racine
+// Add a root
 POST /api/roots          { "root": "كتب" }
 
-// Supprimer un schème
+// Delete a pattern
 DELETE /api/schemes/:name
 
-// Générer un mot
+// Generate a word
 POST /api/generate        { "root": "كتب", "scheme": "مفعول" }
-→ Réponse: { "success": true, "word": "مكتوب" }
+→ Response: { "success": true, "word": "مكتوب" }
 
-// Valider un mot
+// Validate a word
 POST /api/validate        { "word": "مكتوب", "root": "كتب" }
-→ Réponse: { "valid": true, "scheme": "مفعول" }
+→ Response: { "valid": true, "scheme": "مفعول" }
 
-// Obtenir une question du jeu
+// Get a game question
 GET  /api/game/question
-→ Réponse: { "word": "...", "type": "find_root", "options": [...], "correct_answer": "..." }
+→ Response: { "word": "...", "type": "find_root", "options": [...], "correct_answer": "..." }
 ```
 
-### Lancer l'interface graphique
+### Launching the Graphical Interface
 
-#### 1. Lancer le serveur API C++
+#### 1. Launch the C++ API server
 ```bash
 cd build && cmake .. && make
 ./morpho_api_server 3001
 ```
 
-#### 2. Lancer le frontend Next.js
+#### 2. Launch the Next.js frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-L'interface est alors accessible sur **http://localhost:3000**.
+The interface is then accessible at **http://localhost:3000**.
 
-> **Note :** Le serveur C++ doit être lancé en premier sur le port **3001** pour que le frontend puisse s'y connecter (configuré dans `.env.local`).
+> **Note:** The C++ server must be launched first on port **3001** so that the frontend can connect to it (configured in `.env.local`).
 
-## Auteurs: AYARI Wiem & SAKROUFI Aya
- 
+## Authors: AYARI Wiem & SAKROUFI Aya
