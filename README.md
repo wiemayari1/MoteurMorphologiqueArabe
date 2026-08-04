@@ -127,9 +127,3 @@ cd build
 | `make run-api` | Lance le serveur API |
 | `make run-tests` | Lance les tests unitaires |
 | `make frontend-dev` | Lance le serveur Next.js |
-
----
-
-## Licence
-
-Distribué sous la licence Apache-2.0. Voir le fichier [LICENSE](LICENSE).
